@@ -1,0 +1,17 @@
+/node_modules
+package-lock.json
+.env
+.DS_Store
+/logs
+npm-debug.log
+yarn-error.log
+.vscode
+.idea
+dist
+coverage
+*.local
+*.log
+*.pid
+*.seed
+*.pid.lock
+*.swp
