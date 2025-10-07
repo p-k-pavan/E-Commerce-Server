@@ -14,13 +14,21 @@ export const registerUser = async (req: Request, res: Response) => {
     try {
 
         if (!name || !email || !password) {
-            return res.status(400).json({ message: "All fields are required" });
+            return res.status(400).json({ 
+                message: "All fields are required",
+                error: true,
+                success: false 
+            });
         }
 
         const existingUser = await UserModel.findOne({ email });
 
         if (existingUser) {
-            return res.status(400).json({ message: "User already exists" });
+            return res.status(400).json({ 
+                message: "User already exists",
+                error: true,
+                success: false 
+            });
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -28,7 +36,11 @@ export const registerUser = async (req: Request, res: Response) => {
         const verifyEmailAddress = await verifyEmail(email);
 
         if (!verifyEmailAddress) {
-            return res.status(400).json({ message: "Invalid email address" });
+            return res.status(400).json({ 
+                message: "Invalid email address",
+                error: true,
+                success: false 
+            });
         }
 
         const newUser = new UserModel({ name, email, password: hashedPassword });
@@ -60,6 +72,11 @@ export const registerUser = async (req: Request, res: Response) => {
                     name: newUser.name,
                     email: newUser.email,
                     role: newUser.role,
+                    avatar: newUser.avatar,
+                    status: newUser.status,
+                    address_details: newUser.address_details,
+                    orderHistory: newUser.orderHistory,
+                    shopping_cart: newUser.shopping_cart,
                     token: token
                 },
             });
@@ -75,6 +92,7 @@ export const registerUser = async (req: Request, res: Response) => {
     }
 };
 
+// User login
 export const loginUser = async (req: Request, res: Response) => {
     const { email, password } = req.body;
     try {
@@ -195,7 +213,6 @@ export const updateUser = async (req: Request, res: Response) => {
 }
 
 // Forgot password
-
 export const forgotPassword = async (req: Request, res: Response) => {
     const { email } = req.body;
     try {
@@ -252,7 +269,6 @@ export const forgotPassword = async (req: Request, res: Response) => {
 }
 
 //verify forgot password otp
-
 export const verifyForgotPasswordOtp = async (req: Request, res: Response) => {
     const { email, otp } = req.body;
     try {
@@ -305,7 +321,6 @@ export const verifyForgotPasswordOtp = async (req: Request, res: Response) => {
 }
 
 //reset password
-
 export const resetPassword = async (req: Request, res: Response) => {
     const { email, newPassword, confirmPassword } = req.body;
     try {
