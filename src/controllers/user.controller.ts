@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { Request, Response } from "express";
+import e, { Request, Response } from "express";
 import { verifyEmail } from "../utils/verifyEmail";
 import UserModel from "../models/user.model";
 import { error } from "console";
@@ -220,7 +220,7 @@ export const forgotPassword = async (req: Request, res: Response) => {
         const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes from now
 
         const updatedUser = await UserModel.findByIdAndUpdate(user._id, {
-            forget_password_otp: otp,
+            forgot_password_otp: otp,
             forgot_password_expiry: otpExpiry
         }, { new: true });
 
@@ -251,3 +251,55 @@ export const forgotPassword = async (req: Request, res: Response) => {
     }
 }
 
+//verify forgot password otp
+
+export const verifyForgotPasswordOtp = async (req: Request, res: Response) => {
+    const { email, otp } = req.body;
+    try {
+        
+        if(!email || !otp){
+            return res.status(400).json({ message: "All fields are required",
+                success: false,
+                error: true
+             });
+        }
+
+        const user = await UserModel.findOne({ email });
+
+        if(!user){
+            return res.status(400).json({ message: "User not found",
+                success: false,
+                error: true
+             });
+        }
+
+        const currentTime = new Date();
+        if(user.forgot_password_otp !== otp || !user.forgot_password_expiry || user.forgot_password_expiry < currentTime){
+            return res.status(400).json({ message: "Invalid or expired OTP",
+                success: false,
+                error: true
+             });
+        }
+
+        const updatedUser = await UserModel.findByIdAndUpdate(user._id,{
+            forgot_password_otp : null,
+            forgot_password_expiry : null
+        },{ new : true });
+
+        res.status(200).json({ message: "OTP verified successfully",
+            success: true,
+            error: false
+        });
+
+    } catch (error) {
+        
+        const errorMessage = typeof error === "object" && error !== null && "message" in error
+            ? (error as { message?: string }).message
+            : "Server error";
+        res.status(500).json({ message: errorMessage || "Server error" ,
+            success: false,
+            error: true
+        });
+
+    }
+}
