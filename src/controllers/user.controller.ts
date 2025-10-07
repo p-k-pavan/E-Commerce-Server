@@ -4,6 +4,9 @@ import { Request, Response } from "express";
 import { verifyEmail } from "../utils/verifyEmail";
 import UserModel from "../models/user.model";
 import { error } from "console";
+import generatedOtp from "../utils/generatedOTP";
+import sendMail from "../config/sendMail";
+import verifyEmailTemplate from "../utils/verifyEmailTemplate";
 
 // Register a new user
 export const registerUser = async (req: Request, res: Response) => {
@@ -91,7 +94,7 @@ export const loginUser = async (req: Request, res: Response) => {
         if (!process.env.JWT_SECRET) {
             throw new Error("JWT_SECRET environment variable is not defined");
         }
-        const token = jwt.sign({ userId: user._id}, process.env.JWT_SECRET as string, {
+        const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET as string, {
             expiresIn: age,
         });
         res.cookie("ShopEase", token, {
@@ -190,3 +193,61 @@ export const updateUser = async (req: Request, res: Response) => {
 
     }
 }
+
+// Forgot password
+
+export const forgotPassword = async (req: Request, res: Response) => {
+    const { email } = req.body;
+    try {
+
+        if (!email) {
+            return res.status(400).json({ message: "Email is required",
+                success: false,
+                error: true
+             });
+        }
+
+        const user = await UserModel.findOne({ email });
+
+        if (!user) {
+            return res.status(400).json({ message: "User not found",
+                success: false,
+                error: true
+             });
+        }
+
+        const otp = generatedOtp();
+        const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes from now
+
+        const updatedUser = await UserModel.findByIdAndUpdate(user._id, {
+            forget_password_otp: otp,
+            forgot_password_expiry: otpExpiry
+        }, { new: true });
+
+        // Send OTP to user's email
+        await sendMail(
+            email,
+            "Password Reset OTP - ShopEase",
+            verifyEmailTemplate({
+                name: user.name,
+                otp: otp.toString()
+            })
+        );
+
+        res.status(200).json({ message: "OTP sent to email",
+            success: true,
+            error: false
+        });
+
+    } catch (error) {
+
+        const errorMessage = typeof error === "object" && error !== null && "message" in error
+            ? (error as { message?: string }).message
+            : "Server error";
+        res.status(500).json({ message: errorMessage || "Server error" ,
+            success: false,
+            error: true
+        });
+    }
+}
+
