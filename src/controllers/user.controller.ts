@@ -70,3 +70,50 @@ export const registerUser = async (req: Request, res: Response) => {
 
     }
 };
+
+export const loginUser = async (req: Request, res: Response) => {
+    const { email, password } = req.body;
+    try {
+        if (!email || !password) {
+            return res.status(400).json({ message: "All fields are required" });
+        }
+        const user = await UserModel.findOne({ email });
+        if (!user) {
+            return res.status(400).json({ message: "Invalid credentials" });
+        }
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+        if (!isPasswordValid) {
+            return res.status(400).json({ message: "Invalid credentials" });
+        }
+        const isProduction = process.env.NODE_ENV === "production";
+        const age = 7 * 24 * 60 * 60;
+        if (!process.env.JWT_SECRET) {
+            throw new Error("JWT_SECRET environment variable is not defined");
+        }
+        const token = jwt.sign({ admin: user.role === "ADMIN" }, process.env.JWT_SECRET as string, {
+            expiresIn: age,
+        });
+        res.cookie("ShopEase", token, {
+            httpOnly: true,
+            //secure: isProduction,
+            //sameSite: isProduction ? "none" : "lax",
+            maxAge: age * 1000,
+        })
+        .status(200)
+        .json({
+            message: "Login successful",
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                token: token
+            },
+        });
+    } catch (error) {
+        const errorMessage = typeof error === "object" && error !== null && "message" in error
+            ? (error as { message?: string }).message
+            : "Server error";
+        res.status(500).json({ message: errorMessage || "Server error" });
+    }
+}
