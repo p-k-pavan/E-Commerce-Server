@@ -117,3 +117,24 @@ export const loginUser = async (req: Request, res: Response) => {
         res.status(500).json({ message: errorMessage || "Server error" });
     }
 }
+
+// User logout
+export const logoutUser = (req: Request, res: Response) => {
+    try {
+
+        res.cookie("ShopEase", "", {
+            httpOnly: true,
+            //secure: process.env.NODE_ENV === "production",
+            //sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+            expires: new Date(0),
+        }).status(200).json({ message: "Logout successful" });
+        
+    } catch (error) {
+        
+        const errorMessage = typeof error === "object" && error !== null && "message" in error
+            ? (error as { message?: string }).message
+            : "Server error";
+        res.status(500).json({ message: errorMessage || "Server error" });
+        
+    }
+}
