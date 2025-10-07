@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import { Request, Response } from "express";
 import { verifyEmail } from "../utils/verifyEmail";
 import UserModel from "../models/user.model";
+import { error } from "console";
 
 // Register a new user
 export const registerUser = async (req: Request, res: Response) => {
@@ -38,7 +39,7 @@ export const registerUser = async (req: Request, res: Response) => {
             throw new Error("JWT_SECRET environment variable is not defined");
         }
 
-        const token = jwt.sign({ admin: true }, process.env.JWT_SECRET as string, {
+        const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET as string, {
             expiresIn: age,
         });
 
@@ -46,19 +47,19 @@ export const registerUser = async (req: Request, res: Response) => {
             httpOnly: true,
             //secure: isProduction,
             //sameSite: isProduction ? "none" : "lax",
-            maxAge: age * 1000, 
+            maxAge: age * 1000,
         })
-        .status(201)
-        .json({
-            message: "User registered successfully",
-            user: {
-                id: newUser._id,
-                name: newUser.name,
-                email: newUser.email,
-                role: newUser.role,
-                token: token
-            },
-        });
+            .status(201)
+            .json({
+                message: "User registered successfully",
+                user: {
+                    id: newUser._id,
+                    name: newUser.name,
+                    email: newUser.email,
+                    role: newUser.role,
+                    token: token
+                },
+            });
 
     } catch (error) {
 
@@ -90,7 +91,7 @@ export const loginUser = async (req: Request, res: Response) => {
         if (!process.env.JWT_SECRET) {
             throw new Error("JWT_SECRET environment variable is not defined");
         }
-        const token = jwt.sign({ admin: user.role === "ADMIN" }, process.env.JWT_SECRET as string, {
+        const token = jwt.sign({ userId: user._id}, process.env.JWT_SECRET as string, {
             expiresIn: age,
         });
         res.cookie("ShopEase", token, {
@@ -99,17 +100,17 @@ export const loginUser = async (req: Request, res: Response) => {
             //sameSite: isProduction ? "none" : "lax",
             maxAge: age * 1000,
         })
-        .status(200)
-        .json({
-            message: "Login successful",
-            user: {
-                id: user._id,
-                name: user.name,
-                email: user.email,
-                role: user.role,
-                token: token
-            },
-        });
+            .status(200)
+            .json({
+                message: "Login successful",
+                user: {
+                    id: user._id,
+                    name: user.name,
+                    email: user.email,
+                    role: user.role,
+                    token: token
+                },
+            });
     } catch (error) {
         const errorMessage = typeof error === "object" && error !== null && "message" in error
             ? (error as { message?: string }).message
@@ -128,13 +129,64 @@ export const logoutUser = (req: Request, res: Response) => {
             //sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
             expires: new Date(0),
         }).status(200).json({ message: "Logout successful" });
-        
+
     } catch (error) {
-        
+
         const errorMessage = typeof error === "object" && error !== null && "message" in error
             ? (error as { message?: string }).message
             : "Server error";
         res.status(500).json({ message: errorMessage || "Server error" });
-        
+
+    }
+}
+
+// Update user details
+export const updateUser = async (req: Request, res: Response) => {
+    try {
+
+        const userId = (req as Request & { userId?: string }).userId;
+        console.log(userId);
+        if (!userId) {
+            return res.status(401).json({
+                message: "Unauthorized",
+                error: true,
+                success: false
+            });
+        }
+
+        const { name, mobile, password } = req.body;
+
+        let hashedPassword
+
+        if (password) {
+            hashedPassword = await bcrypt.hash(password, 10);
+        }
+        const updatedUser = await UserModel.findByIdAndUpdate(userId, {
+            ...(name && { name: name }),
+            ...(mobile && { mobile: mobile }),
+            ...(password && { password: hashedPassword })
+        }, { new: true });
+
+        res.status(200).json({
+            message: "User updated successfully",
+            name: updatedUser?.name,
+            email: updatedUser?.email,
+            mobile: updatedUser?.mobile,
+            role: updatedUser?.role,
+            error: false,
+            success: true
+        });
+
+    } catch (error) {
+
+        const errorMessage = typeof error === "object" && error !== null && "message" in error
+            ? (error as { message?: string }).message
+            : "Server error";
+        res.status(500).json({
+            message: errorMessage || "Server error",
+            error: true,
+            success: false
+        });
+
     }
 }

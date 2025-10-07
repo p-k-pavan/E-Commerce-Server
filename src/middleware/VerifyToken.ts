@@ -20,6 +20,7 @@ declare global {
 // Correct middleware function
 const VerifyToken = (req: Request, res: Response, next: NextFunction) => {
   const token = req.cookies?.ShopEase;
+  console.log("Token:", token);
 
   if (!token) {
     return res.status(401).json({
@@ -31,6 +32,7 @@ const VerifyToken = (req: Request, res: Response, next: NextFunction) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload;
     req.userId = decoded.userId;
+    console.log("Decoded userId:", req.userId);
     next();
   } catch (err) {
     return res.status(401).json({

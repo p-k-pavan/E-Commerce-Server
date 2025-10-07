@@ -4,6 +4,7 @@ import mongoose from "mongoose";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import userRouter from "./router/user.router";
+import { errorHandler } from "./middleware/errorHandler";
 
 const app = express();
 dotenv.config();
@@ -25,3 +26,14 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT} 1`);
 });
+
+app.use((req, res, next) => {
+    const statusCode = res.statusCode ? res.statusCode : 404;
+    const message = res.statusMessage || "Something went wrong";
+    res.status(statusCode).json({
+        success: false,
+        message: message,
+    });
+    next();
+});
+app.use(errorHandler);
