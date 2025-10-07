@@ -77,7 +77,9 @@ export const registerUser = async (req: Request, res: Response) => {
                     address_details: newUser.address_details,
                     orderHistory: newUser.orderHistory,
                     shopping_cart: newUser.shopping_cart,
-                    token: token
+                    token: token,
+                    error: false,
+                    success: true
                 },
             });
 
@@ -87,7 +89,11 @@ export const registerUser = async (req: Request, res: Response) => {
             ? (error as { message?: string }).message
             : "Server error";
 
-        res.status(500).json({ message: errorMessage || "Server error" });
+        res.status(500).json({ 
+            message: errorMessage || "Server error",
+            error: true,
+            success: false 
+        });
 
     }
 };
@@ -97,18 +103,31 @@ export const loginUser = async (req: Request, res: Response) => {
     const { email, password } = req.body;
     try {
         if (!email || !password) {
-            return res.status(400).json({ message: "All fields are required" });
+            return res.status(400).json({ 
+                message: "All fields are required",
+                error: true,
+                success: false 
+            });
         }
         const user = await UserModel.findOne({ email });
         if (!user) {
-            return res.status(400).json({ message: "Invalid credentials" });
+            return res.status(400).json({ 
+                message: "Invalid credentials",
+                error: true,
+                success: false 
+            });
         }
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
-            return res.status(400).json({ message: "Invalid credentials" });
+            return res.status(400).json({ 
+                message: "Invalid credentials",
+                error: true,
+                success: false 
+            });
         }
         const isProduction = process.env.NODE_ENV === "production";
         const age = 7 * 24 * 60 * 60;
+
         if (!process.env.JWT_SECRET) {
             throw new Error("JWT_SECRET environment variable is not defined");
         }
@@ -129,14 +148,25 @@ export const loginUser = async (req: Request, res: Response) => {
                     name: user.name,
                     email: user.email,
                     role: user.role,
-                    token: token
+                    avatar: user.avatar,
+                    status: user.status,
+                    address_details: user.address_details,
+                    orderHistory: user.orderHistory,
+                    shopping_cart: user.shopping_cart,
+                    token: token,
+                    error: false,
+                    success: true
                 },
             });
     } catch (error) {
         const errorMessage = typeof error === "object" && error !== null && "message" in error
             ? (error as { message?: string }).message
             : "Server error";
-        res.status(500).json({ message: errorMessage || "Server error" });
+        res.status(500).json({ 
+            message: errorMessage || "Server error",
+            error: true,
+            success: false 
+        });
     }
 }
 
@@ -149,14 +179,22 @@ export const logoutUser = (req: Request, res: Response) => {
             //secure: process.env.NODE_ENV === "production",
             //sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
             expires: new Date(0),
-        }).status(200).json({ message: "Logout successful" });
+        }).status(200).json({ 
+            message: "Logout successful",
+            error: false,
+            success: true 
+        });
 
     } catch (error) {
 
         const errorMessage = typeof error === "object" && error !== null && "message" in error
             ? (error as { message?: string }).message
             : "Server error";
-        res.status(500).json({ message: errorMessage || "Server error" });
+        res.status(500).json({ 
+            message: errorMessage || "Server error",
+            error: true,
+            success: false 
+        });
 
     }
 }
@@ -194,6 +232,11 @@ export const updateUser = async (req: Request, res: Response) => {
             email: updatedUser?.email,
             mobile: updatedUser?.mobile,
             role: updatedUser?.role,
+            avatar: updatedUser?.avatar,
+            status: updatedUser?.status,
+            address_details: updatedUser?.address_details,
+            orderHistory: updatedUser?.orderHistory,
+            shopping_cart: updatedUser?.shopping_cart,
             error: false,
             success: true
         });

@@ -3,7 +3,7 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-if(!process.env.RESEND_API_KEY){
+if (!process.env.RESEND_API_KEY) {
     throw new Error("RESEND_API_KEY is not defined in environment variables");
 }
 
