@@ -303,3 +303,56 @@ export const verifyForgotPasswordOtp = async (req: Request, res: Response) => {
 
     }
 }
+
+//reset password
+
+export const resetPassword = async (req: Request, res: Response) => {
+    const { email, newPassword, confirmPassword } = req.body;
+    try {
+
+        if(!email || !newPassword || !confirmPassword){
+            return res.status(400).json({ message: "All fields are required",
+                success: false,
+                error: true
+             });
+        }
+
+        const user = await  UserModel.findOne({ email });
+
+        if(!user){
+            return res.status(400).json({ message: "User not found",
+                success: false,
+                error: true
+             });
+        }
+
+        if(newPassword !== confirmPassword){
+            return res.status(400).json({ message: "Passwords do not match",
+                success: false,
+                error: true
+             });
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        const updatedUser = await UserModel.findByIdAndUpdate(user._id,{
+            password : hashedPassword
+        },{ new : true });
+
+        res.status(200).json({ message: "Password reset successfully",
+            success: true,
+            error: false
+        });
+        
+    } catch (error) {
+
+        const errorMessage = typeof error === "object" && error !== null && "message" in error
+            ? (error as { message?: string }).message
+            : "Server error";
+        res.status(500).json({ message: errorMessage || "Server error" ,
+            success: false,
+            error: true
+        });
+        
+    }
+}
