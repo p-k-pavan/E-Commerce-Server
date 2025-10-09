@@ -6,6 +6,7 @@ import cors from "cors";
 import userRouter from "./router/user.router";
 import { errorHandler } from "./middleware/errorHandler";
 import addressRoute from "./router/address.router"
+import CategoryRoute from "./router/category.router";
 
 const app = express();
 dotenv.config();
@@ -23,6 +24,7 @@ app.use(express.json());
 
 app.use("/api/users", userRouter);
 app.use("/api/address",addressRoute);
+app.use("/api/category",CategoryRoute);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
