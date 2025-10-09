@@ -7,7 +7,8 @@ import userRouter from "./router/user.router";
 import { errorHandler } from "./middleware/errorHandler";
 import addressRoute from "./router/address.router"
 import CategoryRoute from "./router/category.router";
-import SubCategoryRoute from "./router/subCategory.controller"
+import SubCategoryRoute from "./router/subCategory.controller";
+import ProductRoute from "./router/product.router";
 
 const app = express();
 dotenv.config();
@@ -27,6 +28,7 @@ app.use("/api/users", userRouter);
 app.use("/api/address",addressRoute);
 app.use("/api/category",CategoryRoute);
 app.use("/api/subCategory",SubCategoryRoute);
+app.use("/api/product",ProductRoute);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
