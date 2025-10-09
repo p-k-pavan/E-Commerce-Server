@@ -9,6 +9,7 @@ import addressRoute from "./router/address.router"
 import CategoryRoute from "./router/category.router";
 import SubCategoryRoute from "./router/subCategory.controller";
 import ProductRoute from "./router/product.router";
+import CartRoute from "./router/cart.route"
 
 const app = express();
 dotenv.config();
@@ -29,6 +30,7 @@ app.use("/api/address",addressRoute);
 app.use("/api/category",CategoryRoute);
 app.use("/api/subCategory",SubCategoryRoute);
 app.use("/api/product",ProductRoute);
+app.use("/api/cart",CartRoute);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
