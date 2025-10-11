@@ -8,26 +8,27 @@ import generatedOtp from "../utils/generatedOTP";
 import sendMail from "../config/sendMail";
 import verifyEmailTemplate from "../utils/verifyEmailTemplate";
 
+
 // Register a new user
 export const registerUser = async (req: Request, res: Response) => {
     const { name, email, password } = req.body;
     try {
 
         if (!name || !email || !password) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 message: "All fields are required",
                 error: true,
-                success: false 
+                success: false
             });
         }
 
         const existingUser = await UserModel.findOne({ email });
 
         if (existingUser) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 message: "User already exists",
                 error: true,
-                success: false 
+                success: false
             });
         }
 
@@ -36,10 +37,10 @@ export const registerUser = async (req: Request, res: Response) => {
         const verifyEmailAddress = await verifyEmail(email);
 
         if (!verifyEmailAddress) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 message: "Invalid email address",
                 error: true,
-                success: false 
+                success: false
             });
         }
 
@@ -48,7 +49,7 @@ export const registerUser = async (req: Request, res: Response) => {
         await newUser.save();
 
         const isProduction = process.env.NODE_ENV === "production";
-        const age = 7 * 24 * 60 * 60; // 3 days in seconds
+        const age = 7 * 24 * 60 * 60; // 7 days in seconds
 
         if (!process.env.JWT_SECRET) {
             throw new Error("JWT_SECRET environment variable is not defined");
@@ -58,7 +59,7 @@ export const registerUser = async (req: Request, res: Response) => {
             expiresIn: age,
         });
 
-        res.cookie("ShopEase", token, {
+        res.cookie("NammaMart", token, {
             httpOnly: true,
             //secure: isProduction,
             //sameSite: isProduction ? "none" : "lax",
@@ -68,15 +69,18 @@ export const registerUser = async (req: Request, res: Response) => {
             .json({
                 message: "User registered successfully",
                 user: {
-                    id: newUser._id,
+                    _id: newUser._id,
                     name: newUser.name,
                     email: newUser.email,
                     role: newUser.role,
-                    avatar: newUser.avatar,
-                    status: newUser.status,
-                    address_details: newUser.address_details,
-                    orderHistory: newUser.orderHistory,
-                    shopping_cart: newUser.shopping_cart,
+                    avatar: newUser.avatar || "",
+                    mobile: newUser.mobile || "",
+                    verify_email: newUser.verify_email || false,
+                    last_login_date: newUser.last_login_date || new Date().toISOString(),
+                    status: newUser.status || "active",
+                    address_details: newUser.address_details || [],
+                    orderHistory: newUser.orderHistory || [],
+                    shopping_cart: newUser.shopping_cart || [],
                     token: token,
                     error: false,
                     success: true
@@ -89,10 +93,10 @@ export const registerUser = async (req: Request, res: Response) => {
             ? (error as { message?: string }).message
             : "Server error";
 
-        res.status(500).json({ 
+        res.status(500).json({
             message: errorMessage || "Server error",
             error: true,
-            success: false 
+            success: false
         });
 
     }
@@ -103,26 +107,26 @@ export const loginUser = async (req: Request, res: Response) => {
     const { email, password } = req.body;
     try {
         if (!email || !password) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 message: "All fields are required",
                 error: true,
-                success: false 
+                success: false
             });
         }
         const user = await UserModel.findOne({ email });
         if (!user) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 message: "Invalid credentials",
                 error: true,
-                success: false 
+                success: false
             });
         }
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 message: "Invalid credentials",
                 error: true,
-                success: false 
+                success: false
             });
         }
         const isProduction = process.env.NODE_ENV === "production";
@@ -134,7 +138,7 @@ export const loginUser = async (req: Request, res: Response) => {
         const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET as string, {
             expiresIn: age,
         });
-        res.cookie("ShopEase", token, {
+        res.cookie("NammaMart", token, {
             httpOnly: true,
             //secure: isProduction,
             //sameSite: isProduction ? "none" : "lax",
@@ -144,28 +148,33 @@ export const loginUser = async (req: Request, res: Response) => {
             .json({
                 message: "Login successful",
                 user: {
-                    id: user._id,
+
+                    _id: user._id,
                     name: user.name,
                     email: user.email,
                     role: user.role,
-                    avatar: user.avatar,
-                    status: user.status,
-                    address_details: user.address_details,
-                    orderHistory: user.orderHistory,
-                    shopping_cart: user.shopping_cart,
+                    avatar: user.avatar || "",
+                    mobile: user.mobile || "",
+                    verify_email: user.verify_email || false,
+                    last_login_date: user.last_login_date || new Date().toISOString(),
+                    status: user.status || "active",
+                    address_details: user.address_details || [],
+                    orderHistory: user.orderHistory || [],
+                    shopping_cart: user.shopping_cart || [],
                     token: token,
                     error: false,
                     success: true
+
                 },
             });
     } catch (error) {
         const errorMessage = typeof error === "object" && error !== null && "message" in error
             ? (error as { message?: string }).message
             : "Server error";
-        res.status(500).json({ 
+        res.status(500).json({
             message: errorMessage || "Server error",
             error: true,
-            success: false 
+            success: false
         });
     }
 }
@@ -174,15 +183,15 @@ export const loginUser = async (req: Request, res: Response) => {
 export const logoutUser = (req: Request, res: Response) => {
     try {
 
-        res.cookie("ShopEase", "", {
+        res.cookie("NammaMart", "", {
             httpOnly: true,
             //secure: process.env.NODE_ENV === "production",
             //sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
             expires: new Date(0),
-        }).status(200).json({ 
+        }).status(200).json({
             message: "Logout successful",
             error: false,
-            success: true 
+            success: true
         });
 
     } catch (error) {
@@ -190,10 +199,10 @@ export const logoutUser = (req: Request, res: Response) => {
         const errorMessage = typeof error === "object" && error !== null && "message" in error
             ? (error as { message?: string }).message
             : "Server error";
-        res.status(500).json({ 
+        res.status(500).json({
             message: errorMessage || "Server error",
             error: true,
-            success: false 
+            success: false
         });
 
     }
@@ -261,19 +270,21 @@ export const forgotPassword = async (req: Request, res: Response) => {
     try {
 
         if (!email) {
-            return res.status(400).json({ message: "Email is required",
+            return res.status(400).json({
+                message: "Email is required",
                 success: false,
                 error: true
-             });
+            });
         }
 
         const user = await UserModel.findOne({ email });
 
         if (!user) {
-            return res.status(400).json({ message: "User not found",
+            return res.status(400).json({
+                message: "User not found",
                 success: false,
                 error: true
-             });
+            });
         }
 
         const otp = generatedOtp();
@@ -287,14 +298,15 @@ export const forgotPassword = async (req: Request, res: Response) => {
         // Send OTP to user's email
         await sendMail(
             email,
-            "Password Reset OTP - ShopEase",
+            "Password Reset OTP - NammaMart",
             verifyEmailTemplate({
                 name: user.name,
                 otp: otp.toString()
             })
         );
 
-        res.status(200).json({ message: "OTP sent to email",
+        res.status(200).json({
+            message: "OTP sent to email",
             success: true,
             error: false
         });
@@ -304,7 +316,8 @@ export const forgotPassword = async (req: Request, res: Response) => {
         const errorMessage = typeof error === "object" && error !== null && "message" in error
             ? (error as { message?: string }).message
             : "Server error";
-        res.status(500).json({ message: errorMessage || "Server error" ,
+        res.status(500).json({
+            message: errorMessage || "Server error",
             success: false,
             error: true
         });
@@ -315,47 +328,52 @@ export const forgotPassword = async (req: Request, res: Response) => {
 export const verifyForgotPasswordOtp = async (req: Request, res: Response) => {
     const { email, otp } = req.body;
     try {
-        
-        if(!email || !otp){
-            return res.status(400).json({ message: "All fields are required",
+
+        if (!email || !otp) {
+            return res.status(400).json({
+                message: "All fields are required",
                 success: false,
                 error: true
-             });
+            });
         }
 
         const user = await UserModel.findOne({ email });
 
-        if(!user){
-            return res.status(400).json({ message: "User not found",
+        if (!user) {
+            return res.status(400).json({
+                message: "User not found",
                 success: false,
                 error: true
-             });
+            });
         }
 
         const currentTime = new Date();
-        if(user.forgot_password_otp !== otp || !user.forgot_password_expiry || user.forgot_password_expiry < currentTime){
-            return res.status(400).json({ message: "Invalid or expired OTP",
+        if (user.forgot_password_otp !== otp || !user.forgot_password_expiry || user.forgot_password_expiry < currentTime) {
+            return res.status(400).json({
+                message: "Invalid or expired OTP",
                 success: false,
                 error: true
-             });
+            });
         }
 
-        const updatedUser = await UserModel.findByIdAndUpdate(user._id,{
-            forgot_password_otp : null,
-            forgot_password_expiry : null
-        },{ new : true });
+        const updatedUser = await UserModel.findByIdAndUpdate(user._id, {
+            forgot_password_otp: null,
+            forgot_password_expiry: null
+        }, { new: true });
 
-        res.status(200).json({ message: "OTP verified successfully",
+        res.status(200).json({
+            message: "OTP verified successfully",
             success: true,
             error: false
         });
 
     } catch (error) {
-        
+
         const errorMessage = typeof error === "object" && error !== null && "message" in error
             ? (error as { message?: string }).message
             : "Server error";
-        res.status(500).json({ message: errorMessage || "Server error" ,
+        res.status(500).json({
+            message: errorMessage || "Server error",
             success: false,
             error: true
         });
@@ -368,49 +386,54 @@ export const resetPassword = async (req: Request, res: Response) => {
     const { email, newPassword, confirmPassword } = req.body;
     try {
 
-        if(!email || !newPassword || !confirmPassword){
-            return res.status(400).json({ message: "All fields are required",
+        if (!email || !newPassword || !confirmPassword) {
+            return res.status(400).json({
+                message: "All fields are required",
                 success: false,
                 error: true
-             });
+            });
         }
 
-        const user = await  UserModel.findOne({ email });
+        const user = await UserModel.findOne({ email });
 
-        if(!user){
-            return res.status(400).json({ message: "User not found",
+        if (!user) {
+            return res.status(400).json({
+                message: "User not found",
                 success: false,
                 error: true
-             });
+            });
         }
 
-        if(newPassword !== confirmPassword){
-            return res.status(400).json({ message: "Passwords do not match",
+        if (newPassword !== confirmPassword) {
+            return res.status(400).json({
+                message: "Passwords do not match",
                 success: false,
                 error: true
-             });
+            });
         }
 
         const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-        const updatedUser = await UserModel.findByIdAndUpdate(user._id,{
-            password : hashedPassword
-        },{ new : true });
+        const updatedUser = await UserModel.findByIdAndUpdate(user._id, {
+            password: hashedPassword
+        }, { new: true });
 
-        res.status(200).json({ message: "Password reset successfully",
+        res.status(200).json({
+            message: "Password reset successfully",
             success: true,
             error: false
         });
-        
+
     } catch (error) {
 
         const errorMessage = typeof error === "object" && error !== null && "message" in error
             ? (error as { message?: string }).message
             : "Server error";
-        res.status(500).json({ message: errorMessage || "Server error" ,
+        res.status(500).json({
+            message: errorMessage || "Server error",
             success: false,
             error: true
         });
-        
+
     }
 }

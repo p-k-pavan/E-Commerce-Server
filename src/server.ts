@@ -21,16 +21,19 @@ mongoose.connect(process.env.MONGODB_URL || "")
         console.error("Error connecting to MongoDB:", error);
     });
 
-// app.use(cors());
+app.use(cors({
+    origin: "http://localhost:3000",
+    credentials: true
+}));
 app.use(cookieParser());
 app.use(express.json());
 
 app.use("/api/users", userRouter);
-app.use("/api/address",addressRoute);
-app.use("/api/category",CategoryRoute);
-app.use("/api/subCategory",SubCategoryRoute);
-app.use("/api/product",ProductRoute);
-app.use("/api/cart",CartRoute);
+app.use("/api/address", addressRoute);
+app.use("/api/category", CategoryRoute);
+app.use("/api/subCategory", SubCategoryRoute);
+app.use("/api/product", ProductRoute);
+app.use("/api/cart", CartRoute);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

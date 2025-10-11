@@ -299,57 +299,51 @@ export const getProductDetails = async (req: Request, res: Response) => {
     }
 }
 
-//search Product
 export const searchProduct = async (req: Request, res: Response) => {
-    try {
+  try {
+    let { search = "", page = 1, limit = 10 } = req.body || {};
 
-        let { search, page, limit } = req.body;
+    // If 'search' has value -> search by text
+    // Else -> show all products
+    const query = search.trim()
+      ? { $text: { $search: search } }
+      : {};
 
-        if (!page) {
-            page = 1
-        }
+    const skip = (page - 1) * limit;
 
-        if (!limit) {
-            limit = 1
-        }
+    const [data, dataCount] = await Promise.all([
+      ProductModel.find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate("category subCategory"),
+      ProductModel.countDocuments(query),
+    ]);
 
-        const query = search ? {
-            $text: {
-                $search: search
-            }
-        } : {}
+    return res.json({
+      message: search.trim() ? "Search results" : "All products",
+      success: true,
+      error: false,
+      data,
+      totalCount: dataCount,
+      totalPage: Math.ceil(dataCount / limit),
+      page,
+      limit,
+    });
+  } catch (error) {
+    const errorMessage =
+      typeof error === "object" && error !== null && "message" in error
+        ? (error as { message?: string }).message
+        : "Server error";
 
-        const skip = (page - 1) * limit
+    res.status(500).json({
+      message: errorMessage,
+      success: false,
+      error: true,
+    });
+  }
+};
 
-        const [data, dataCount] = await Promise.all([
-            ProductModel.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).populate('category subCategory'),
-            ProductModel.countDocuments(query)
-        ])
-
-        return res.json({
-            message: "Product data",
-            error: false,
-            success: true,
-            data: data,
-            totalCount: dataCount,
-            totalPage: Math.ceil(dataCount / limit),
-            page: page,
-            limit: limit
-        })
-
-    } catch (error) {
-        const errorMessage =
-            typeof error === "object" && error !== null && "message" in error
-                ? (error as { message?: string }).message
-                : "Server error";
-
-        res.status(500).json({
-            message: errorMessage,
-            success: false,
-            error: true
-        });
-    }
-}
 
 //get Product
 export const getProductController = async (req: Request, res: Response) => {

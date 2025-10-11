@@ -19,7 +19,7 @@ declare global {
 
 // Correct middleware function
 const VerifyToken = (req: Request, res: Response, next: NextFunction) => {
-  const token = req.cookies?.ShopEase;
+  const token = req.cookies?.NammaMart;
 
   if (!token) {
     return res.status(401).json({
