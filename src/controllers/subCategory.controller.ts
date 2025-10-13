@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import UserModel from "../models/user.model";
 import SubCategoryModel from "../models/subCategory.model";
+import mongoose from "mongoose";
 
 // Add SubCategory
 export const addSubCategory = async (req: Request, res: Response) => {
@@ -78,6 +79,48 @@ export const getSubCategory = async (req: Request, res: Response) => {
     res.status(500).json({ message: errorMessage, error: true, success: false });
   }
 };
+
+// Get SubCategories by Category ID
+export const getSubCategoryByCategory = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.body;
+
+    if (!id) {
+      return res.status(400).json({
+        message: "Provide category id",
+        error: true,
+        success: false,
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        message: "Invalid category id",
+        error: true,
+        success: false,
+      });
+    }
+
+    const subcategories = await SubCategoryModel.find({
+      category: { $in: [id] },
+    });
+
+    return res.json({
+      message: "Subcategories fetched successfully",
+      data: subcategories,
+      success: true,
+      error: false,
+    });
+  } catch (error) {
+    const errorMessage =
+      typeof error === "object" && error !== null && "message" in error
+        ? (error as { message?: string }).message
+        : "Server error";
+
+    res.status(500).json({ message: errorMessage, error: true, success: false });
+  }
+};
+
 
 // Delete SubCategory
 export const deleteSubCategory = async (req: Request, res: Response) => {

@@ -12,6 +12,6 @@ router.get("/:id",getProductDetails);
 router.post('/search-product',searchProduct)
 router.post("/get",getProductController);
 router.post("/get-product-by-category",getProductByCategory)
-router.post('/get-pruduct-by-category-and-subcategory',getProductByCategoryAndSubCategory)
+router.post('/get-product-by-category-and-subcategory',getProductByCategoryAndSubCategory)
 
 export default router;
