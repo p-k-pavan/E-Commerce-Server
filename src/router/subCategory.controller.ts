@@ -5,7 +5,7 @@ import { addSubCategory, deleteSubCategory, getSubCategory, getSubCategoryByCate
 const router = express.Router();
 
 router.post("/",VerifyToken,addSubCategory);
-router.post("/get-subcategoty-by-categoryId",getSubCategoryByCategory)
+router.post("/get-subcategory-by-categoryId",getSubCategoryByCategory)
 router.put("/:id",VerifyToken,updateSubCategory);
 router.delete("/:id",VerifyToken,deleteSubCategory);
 router.get("/",getSubCategory);

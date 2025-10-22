@@ -83,9 +83,9 @@ export const getSubCategory = async (req: Request, res: Response) => {
 // Get SubCategories by Category ID
 export const getSubCategoryByCategory = async (req: Request, res: Response) => {
   try {
-    const { id } = req.body;
+    const { categoryId } = req.body;
 
-    if (!id) {
+    if (!categoryId) {
       return res.status(400).json({
         message: "Provide category id",
         error: true,
@@ -93,7 +93,7 @@ export const getSubCategoryByCategory = async (req: Request, res: Response) => {
       });
     }
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
+    if (!mongoose.Types.ObjectId.isValid(categoryId)) {
       return res.status(400).json({
         message: "Invalid category id",
         error: true,
@@ -102,7 +102,7 @@ export const getSubCategoryByCategory = async (req: Request, res: Response) => {
     }
 
     const subcategories = await SubCategoryModel.find({
-      category: { $in: [id] },
+      category: { $in: [categoryId] },
     });
 
     return res.json({

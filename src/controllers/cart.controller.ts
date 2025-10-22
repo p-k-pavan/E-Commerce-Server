@@ -71,7 +71,7 @@ export const getCartItemController = async(req: Request, res: Response)=>{
         }).populate('productId')
 
         return res.json({
-            data : cartItem,
+            cart : cartItem,
             error : false,
             success : true
         })
@@ -90,77 +90,121 @@ export const getCartItemController = async(req: Request, res: Response)=>{
     }
 }
 
-export const updateCartItemQtyController = async(req: Request, res: Response)=>{
-    try {
-        const userId = req.userId 
-        const { _id,qty } = req.body
+export const updateCartItemQtyController = async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId;
+    const { _id, qty } = req.body;
 
-        if(!_id ||  !qty){
-            return res.status(400).json({
-                message : "provide _id, qty"
-            })
-        }
-
-        const updateCartitem = await CartProductModel.updateOne({
-            _id : _id,
-            userId : userId
-        },{
-            quantity : qty
-        })
-
-        return res.json({
-            message : "Update cart",
-            success : true,
-            error : false, 
-            data : updateCartitem
-        })
-
-    } catch (error) {
-        const errorMessage =
-            typeof error === "object" && error !== null && "message" in error
-                ? (error as { message?: string }).message
-                : "Server error";
-
-        res.status(500).json({
-            message: errorMessage,
-            success: false,
-            error: true
-        });
+    if (!_id || qty === undefined) {
+      return res.status(400).json({
+        message: "Provide _id and qty",
+        error: true,
+        success: false,
+      });
     }
-}
 
-export const deleteCartItemQtyController = async(req: Request, res: Response)=>{
-    try {
-      const userId = req.userId
-      const { _id } = req.body 
-      
-      if(!_id){
-        return res.status(400).json({
-            message : "Provide _id",
-            error : true,
-            success : false
-        })
-      }
+    // 🔹 Check if the item exists first
+    const cartItem = await CartProductModel.findOne({ _id, userId });
+    if (!cartItem) {
+      return res.status(404).json({
+        message: "Cart item not found",
+        error: true,
+        success: false,
+      });
+    }
 
-      const deleteCartItem  = await CartProductModel.deleteOne({_id : _id, userId : userId })
+    // 🔹 If qty is exactly 0 → remove from cart and user model
+    if (qty === 0) {
+      await CartProductModel.deleteOne({ _id, userId });
+
+      await UserModel.updateOne(
+        { _id: userId },
+        { $pull: { shopping_cart: cartItem.productId } }
+      );
 
       return res.json({
-        message : "Item remove",
-        error : false,
-        success : true,
-        data : deleteCartItem
-      })
-
-    } catch (error) {
-        const errorMessage =
-            typeof error === "object" && error !== null && "message" in error
-                ? (error as { message?: string }).message
-                : "Server error";
-
-        res.status(500).json({
-            message: errorMessage,
-            success: false,
-            error: true
-        });
+        message: "Item removed from cart (quantity was 0)",
+        success: true,
+        error: false,
+      });
     }
-}
+
+    // 🔹 Otherwise just update quantity
+    const updateCartItem = await CartProductModel.updateOne(
+      { _id, userId },
+      { quantity: qty }
+    );
+
+    return res.json({
+      message: "Cart item quantity updated",
+      success: true,
+      error: false,
+      data: updateCartItem,
+    });
+
+  } catch (error) {
+    const errorMessage =
+      typeof error === "object" && error !== null && "message" in error
+        ? (error as { message?: string }).message
+        : "Server error";
+
+    res.status(500).json({
+      message: errorMessage,
+      success: false,
+      error: true,
+    });
+  }
+};
+
+
+export const deleteCartItemQtyController = async(req: Request, res: Response) => {
+  try {
+    const userId = req.userId;
+    const { _id } = req.body;
+
+    if (!_id) {
+      return res.status(400).json({
+        message: "Provide _id",
+        error: true,
+        success: false,
+      });
+    }
+
+    // Find the cart item first to get the productId
+    const cartItem = await CartProductModel.findOne({ _id, userId });
+    if (!cartItem) {
+      return res.status(404).json({
+        message: "Cart item not found",
+        error: true,
+        success: false,
+      });
+    }
+
+    // Delete from CartProductModel
+    await CartProductModel.deleteOne({ _id, userId });
+
+    // Remove productId from UserModel.shopping_cart
+    await UserModel.updateOne(
+      { _id: userId },
+      { $pull: { shopping_cart: cartItem.productId } }
+    );
+
+    return res.json({
+      message: "Item removed successfully",
+      error: false,
+      success: true,
+    });
+
+  } catch (error) {
+    const errorMessage =
+      typeof error === "object" && error !== null && "message" in error
+        ? (error as { message?: string }).message
+        : "Server error";
+
+    res.status(500).json({
+      message: errorMessage,
+      success: false,
+      error: true,
+    });
+  }
+};

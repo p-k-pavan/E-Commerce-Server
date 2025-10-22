@@ -7,7 +7,6 @@ import VerifyToken from "../middleware/VerifyToken";
 const router = express.Router();
 
 
-// POST /api/upload
-router.post("/upload",VerifyToken ,upload.array("file"), uploadImageController);
+router.post("/product",VerifyToken ,upload.array("file"), uploadImageController);
 
 export default router;
