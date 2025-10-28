@@ -103,7 +103,6 @@ export const updateCartItemQtyController = async (req: Request, res: Response) =
       });
     }
 
-    // 🔹 Check if the item exists first
     const cartItem = await CartProductModel.findOne({ _id, userId });
     if (!cartItem) {
       return res.status(404).json({
@@ -113,7 +112,6 @@ export const updateCartItemQtyController = async (req: Request, res: Response) =
       });
     }
 
-    // 🔹 If qty is exactly 0 → remove from cart and user model
     if (qty === 0) {
       await CartProductModel.deleteOne({ _id, userId });
 
@@ -129,7 +127,6 @@ export const updateCartItemQtyController = async (req: Request, res: Response) =
       });
     }
 
-    // 🔹 Otherwise just update quantity
     const updateCartItem = await CartProductModel.updateOne(
       { _id, userId },
       { quantity: qty }

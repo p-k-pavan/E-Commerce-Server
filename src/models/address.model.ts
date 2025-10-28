@@ -31,7 +31,7 @@ const addressSchema = new mongoose.Schema({
         default: false
     },
     mobile: {
-        type: Number,
+        type: String,
         required: [true, "provide mobile number"]
     }
 }, { timestamps: true });

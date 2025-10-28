@@ -126,7 +126,7 @@ export const getSubCategoryByCategory = async (req: Request, res: Response) => {
 export const deleteSubCategory = async (req: Request, res: Response) => {
   try {
     const userId = (req as Request & { userId?: string }).userId;
-    const { id } = req.body;
+    const { id } = req.params;
 
     if (!id) {
       return res.status(400).json({
