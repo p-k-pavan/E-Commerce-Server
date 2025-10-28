@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { type } from "os";
 
 const orderSchema = new mongoose.Schema({
     userId : {
@@ -29,6 +30,10 @@ const orderSchema = new mongoose.Schema({
     delivery_address : {
         type : mongoose.Schema.ObjectId,
         ref : 'address'
+    },
+    quantity : {
+        type : Number,
+        required: true
     },
     subTotalAmt : {
         type : Number,

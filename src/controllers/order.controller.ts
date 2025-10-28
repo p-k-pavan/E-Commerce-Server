@@ -27,19 +27,31 @@ export const cashonDelivery = async (req: Request, res: Response) => {
             });
         }
 
-        const payload = list_items.map((el: any) => ({
-            userId,
-            orderId: `ORD-${new mongoose.Types.ObjectId()}`,
-            productId: el.productId?._id || el.productId,
-            product_details: el.productId?.name ? {
-                name: el.productId.name,
-                image: el.productId.image
-            } : undefined,
-            payment_status: "CASH ON DELIVERY",
-            delivery_address: addressId,
-            subTotalAmt,
-            totalAmt,
-        }));
+        const payload = list_items.map((el: any) => {
+            const product = el.productId;
+            const price = product.price;
+            const discount = product.discount || 0;
+            const qty = el.quantity;
+
+            const discountedPrice = price - (price * discount) / 100;
+            const itemTotal = discountedPrice * qty;
+
+            return {
+                userId,
+                orderId: `ORD-${new mongoose.Types.ObjectId()}`,
+                productId: product._id,
+                product_details: {
+                    name: product.name,
+                    image: product.image
+                },
+                quantity: qty,
+                payment_status: "CASH ON DELIVERY",
+                delivery_address: addressId,
+                subTotalAmt: price * qty,
+                totalAmt: itemTotal,
+            };
+        });
+
 
         const generatedOrders = await OrderModel.insertMany(payload);
 
