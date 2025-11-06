@@ -29,20 +29,24 @@ const uploadImageController = async (
       });
     }
 
-    if(files.length > 5){
+    if (files.length > 7) {
       return res.status(400).json({
-        message: "Maximum 5 files can be uploaded at once",
+        message: "Maximum 7 files can be uploaded at once",
         success: false,
         error: true,
       });
     }
 
-    // Upload each file to Cloudinary
-    const uploadPromises = files.map((file) => uploadToCloudinary(file));
-    const uploadedUrls = await Promise.all(uploadPromises);
+    const uploadedUrls: string[] = [];
+
+    // Upload sequentially (maintains order)
+    for (const file of files) {
+      const url = await uploadToCloudinary(file);
+      uploadedUrls.push(url);
+    }
 
     return res.json({
-      message: "All files uploaded successfully",
+      message: "All files uploaded successfully in order",
       data: uploadedUrls,
       success: true,
       error: false,

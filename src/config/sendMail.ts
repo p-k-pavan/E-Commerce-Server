@@ -17,11 +17,9 @@ const sendMail = async (toSend: string, subject: string, html: string) => {
             subject: subject,
             html: html,
         });
-        console.log("Email sent successfully:", response);
 
         return response;
     } catch (error) {
-        console.error("Error sending email:", error);
 
         throw error;
     }

@@ -10,17 +10,24 @@ cloudinary.config({
 const uploadToCloudinary = async (file: Express.Multer.File) => {
   if (!file) throw new Error("No file provided");
 
-  // Resize image before uploading
+  // Resize before uploading
   const resizedBuffer = await sharp(file.buffer)
     .resize({ width: 800, height: 600 })
     .toBuffer();
 
-  // Upload to Cloudinary
+  // Use original file name as public_id (upload with order)
+  const fileName = file.originalname.split(".")[0]; // remove extension
+
+  // Upload stream
   return new Promise<string>((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       {
         resource_type: "auto",
-        folder: "E-Commerce", 
+        folder: "E-Commerce",
+        public_id: fileName,
+        use_filename: true,
+        unique_filename: false,
+        overwrite: true,
       },
       (err, result) => {
         if (err) return reject(err);
