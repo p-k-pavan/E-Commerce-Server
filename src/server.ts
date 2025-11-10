@@ -24,9 +24,14 @@ mongoose.connect(process.env.MONGODB_URL || "")
     });
 
 app.use(cors({
-    origin: "http://localhost:3000",
+    origin: [
+        "https://e-commerce-client-snowy.vercel.app",
+        "https://e-commerce-client-snowy.vercel.app/", // Include both variations
+        "http://localhost:3000"
+    ],
     credentials: true
 }));
+
 app.use(cookieParser());
 app.use(express.json());
 

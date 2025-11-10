@@ -4,10 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-  "dev": "ts-node-dev --respawn src/server.ts",
-  "build": "tsc",
-  "start": "node dist/server.js"
-},
+    "dev": "ts-node-dev --respawn src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
@@ -28,6 +28,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@types/crypto-js": "^4.2.2",
     "axios": "^1.12.2",
     "bcryptjs": "^3.0.2",
     "cloudinary": "^2.7.0",
@@ -39,6 +40,8 @@
     "mongodb": "^6.20.0",
     "mongoose": "^8.19.0",
     "multer": "^2.0.2",
+    "razorpay": "^2.9.6",
+    "razorpay-typescript": "^1.0.12",
     "resend": "^6.1.2",
     "sharp": "^0.34.4"
   }

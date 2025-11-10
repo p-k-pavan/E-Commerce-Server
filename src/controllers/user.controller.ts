@@ -61,8 +61,8 @@ export const registerUser = async (req: Request, res: Response) => {
 
         res.cookie("NammaMart", token, {
             httpOnly: true,
-            //secure: isProduction,
-            //sameSite: isProduction ? "none" : "lax",
+            secure: isProduction,
+            sameSite: isProduction ? "none" : "lax",
             maxAge: age * 1000,
         })
             .status(201)
@@ -140,8 +140,8 @@ export const loginUser = async (req: Request, res: Response) => {
         });
         res.cookie("NammaMart", token, {
             httpOnly: true,
-            //secure: isProduction,
-            //sameSite: isProduction ? "none" : "lax",
+            secure: isProduction,
+            sameSite: isProduction ? "none" : "lax",
             maxAge: age * 1000,
         })
             .status(200)
@@ -183,8 +183,8 @@ export const logoutUser = (req: Request, res: Response) => {
 
         res.cookie("NammaMart", "", {
             httpOnly: true,
-            //secure: process.env.NODE_ENV === "production",
-            //sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+            secure: process.env.NODE_ENV === "production",
+            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
             expires: new Date(0),
         }).status(200).json({
             message: "Logout successful",
