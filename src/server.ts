@@ -27,6 +27,8 @@ app.use(cors({
     origin: [
         "https://www.namma-mart.shop",
         "https://www.namma-mart.shop/",
+        "https://e-commerce-client-snowy.vercel.app",
+        "https://e-commerce-client-snowy.vercel.app/",
         "http://localhost:3000"
     ],
     credentials: true
