@@ -25,8 +25,8 @@ mongoose.connect(process.env.MONGODB_URL || "")
 
 app.use(cors({
     origin: [
-        "https://e-commerce-client-snowy.vercel.app",
-        "https://e-commerce-client-snowy.vercel.app/", // Include both variations
+        "https://www.namma-mart.shop",
+        "https://www.namma-mart.shop/",
         "http://localhost:3000"
     ],
     credentials: true
