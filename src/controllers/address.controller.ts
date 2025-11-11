@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import e, { Request, Response } from "express";
 import Address from "../models/address.model";
 import UserModel from "../models/user.model";
 
@@ -196,6 +196,40 @@ export const updateAddress = async (req: Request, res: Response) => {
             success: true
         });
 
+    } catch (error) {
+        res.status(500).json({
+            message: "Server error",
+            error: true,
+            success: false,
+        });
+    }
+};
+
+export const getAddressById = async (req: Request, res: Response) => {
+    try {
+        const userId = (req as Request & { userId?: string }).userId;
+        const addressId = req.params.id;
+        if (!userId) {
+            return res.status(400).json({
+                message: "Unauthorize",
+                error: true,
+                success: false
+            });
+        }
+        const address = await Address.findOne({ _id: addressId, userId });
+        if (!address) {
+            return res.status(404).json({
+                message: "Address not found",
+                error: true,
+                success: false
+            });
+        }
+        res.status(200).json({
+            message: "Address fetched successfully",
+            address,
+            error: false,
+            success: true
+        });
     } catch (error) {
         res.status(500).json({
             message: "Server error",

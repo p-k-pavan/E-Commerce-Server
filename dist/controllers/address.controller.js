@@ -146,8 +146,6 @@ const updateAddress = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     try {
         const userId = req.userId;
         const addressId = req.params.id;
-        console.log(userId);
-        console.log(addressId);
         const { street, city, state, postalCode, country, mobile, isDefault } = req.body;
         if (!userId) {
             return res.status(400).json({
@@ -183,3 +181,5 @@ const updateAddress = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     }
 });
 exports.updateAddress = updateAddress;
+
+
