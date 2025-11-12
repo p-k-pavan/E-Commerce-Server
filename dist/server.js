@@ -27,8 +27,10 @@ mongoose_1.default.connect(process.env.MONGODB_URL || "")
 });
 app.use((0, cors_1.default)({
     origin: [
+        "https://www.namma-mart.shop",
+        "https://www.namma-mart.shop/",
         "https://e-commerce-client-snowy.vercel.app",
-        "https://e-commerce-client-snowy.vercel.app/", // Include both variations
+        "https://e-commerce-client-snowy.vercel.app/",
         "http://localhost:3000"
     ],
     credentials: true

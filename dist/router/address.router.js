@@ -10,5 +10,6 @@ const router = express_1.default.Router();
 router.post("/", VerifyToken_1.default, address_controller_1.addAddress);
 router.put("/:id", VerifyToken_1.default, address_controller_1.updateAddress);
 router.delete("/:id", VerifyToken_1.default, address_controller_1.deleteAddress);
+router.get("/:id", VerifyToken_1.default, address_controller_1.getAddressById);
 router.get("/", VerifyToken_1.default, address_controller_1.getAllAddress);
 exports.default = router;

@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateAddress = exports.deleteAddress = exports.getAllAddress = exports.addAddress = void 0;
+exports.getAddressById = exports.updateAddress = exports.deleteAddress = exports.getAllAddress = exports.addAddress = void 0;
 const address_model_1 = __importDefault(require("../models/address.model"));
 const user_model_1 = __importDefault(require("../models/user.model"));
 // add Address
@@ -146,6 +146,8 @@ const updateAddress = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     try {
         const userId = req.userId;
         const addressId = req.params.id;
+        console.log(userId);
+        console.log(addressId);
         const { street, city, state, postalCode, country, mobile, isDefault } = req.body;
         if (!userId) {
             return res.status(400).json({
@@ -181,5 +183,38 @@ const updateAddress = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     }
 });
 exports.updateAddress = updateAddress;
-
-
+const getAddressById = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const userId = req.userId;
+        const addressId = req.params.id;
+        if (!userId) {
+            return res.status(400).json({
+                message: "Unauthorize",
+                error: true,
+                success: false
+            });
+        }
+        const address = yield address_model_1.default.findOne({ _id: addressId, userId });
+        if (!address) {
+            return res.status(404).json({
+                message: "Address not found",
+                error: true,
+                success: false
+            });
+        }
+        res.status(200).json({
+            message: "Address fetched successfully",
+            address,
+            error: false,
+            success: true
+        });
+    }
+    catch (error) {
+        res.status(500).json({
+            message: "Server error",
+            error: true,
+            success: false,
+        });
+    }
+});
+exports.getAddressById = getAddressById;
