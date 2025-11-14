@@ -156,7 +156,7 @@ export const deleteCategory = async (req: Request, res: Response) => {
 // Get All Categories
 export const getCategory = async (req: Request, res: Response) => {
   try {
-    const data = await CategoryModel.find();
+    const data = await CategoryModel.find().sort({ name: 1 });
     return res.json({ data, success: true, error: false });
   } catch (error) {
     const errorMessage =
