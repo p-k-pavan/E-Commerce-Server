@@ -148,7 +148,7 @@ exports.deleteCategory = deleteCategory;
 // Get All Categories
 const getCategory = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const data = yield category_model_1.default.find();
+        const data = yield category_model_1.default.find().sort({ name: 1 });
         return res.json({ data, success: true, error: false });
     }
     catch (error) {
