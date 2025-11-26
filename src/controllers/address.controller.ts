@@ -1,4 +1,4 @@
-import e, { Request, Response } from "express";
+import { Request, Response } from "express";
 import Address from "../models/address.model";
 import UserModel from "../models/user.model";
 

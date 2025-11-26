@@ -1,9 +1,8 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import e, { Request, Response } from "express";
+import { Request, Response } from "express";
 import { verifyEmail } from "../utils/verifyEmail";
 import UserModel from "../models/user.model";
-import { error } from "console";
 import generatedOtp from "../utils/generatedOTP";
 import sendMail from "../config/sendMail";
 import verifyEmailTemplate from "../utils/verifyEmailTemplate";
