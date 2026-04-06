@@ -167,3 +167,57 @@ export const getCategory = async (req: Request, res: Response) => {
     res.status(500).json({ message: errorMessage, error: true, success: false });
   }
 };
+
+export const bulkUploadCategory = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as Request & { userId?: string }).userId;
+    const categories = req.body;
+
+    if (!userId) {
+      return res.status(401).json({
+        message: "Unauthorized",
+        error: true,
+        success: false
+      });
+    }
+
+    const user = await UserModel.findById(userId);
+    if (!user || user.role !== "ADMIN") {
+      return res.status(403).json({
+        message: "Unauthorized access",
+        error: true,
+        success: false
+      });
+    }
+
+    if (!Array.isArray(categories) || categories.length === 0) {
+      return res.status(400).json({
+        message: "Invalid data. Send array of categories",
+        error: true,
+        success: false
+      });
+    }
+
+    const formattedData = categories.map((item) => ({
+      name: item.name,
+      image: item.image || undefined
+    }));
+
+    const result = await CategoryModel.insertMany(formattedData);
+
+    return res.status(201).json({
+      message: "Bulk categories uploaded successfully",
+      data: result,
+      success: true,
+      error: false
+    });
+
+  } catch (error) {
+    const errorMessage =
+      typeof error === "object" && error !== null && "message" in error
+        ? (error as { message?: string }).message
+        : "Server error";
+
+    res.status(500).json({ message: errorMessage, error: true, success: false });
+  }
+};
