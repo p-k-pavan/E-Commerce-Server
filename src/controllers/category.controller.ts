@@ -35,7 +35,21 @@ export const addCategory = async (req: Request, res: Response) => {
       });
     }
 
-    const savedCategory = await CategoryModel.create({ name, image });
+    const cleanName = name.trim();
+
+    const existing = await CategoryModel.findOne({ name: cleanName });
+    if (existing) {
+      return res.status(400).json({
+        message: "Category already exists",
+        error: true,
+        success: false
+      });
+    }
+
+    const savedCategory = await CategoryModel.create({
+      name: cleanName,
+      image
+    });
 
     return res.status(201).json({
       message: "Category saved successfully",
@@ -44,13 +58,12 @@ export const addCategory = async (req: Request, res: Response) => {
       error: false
     });
 
-  } catch (error) {
-    const errorMessage =
-      typeof error === "object" && error !== null && "message" in error
-        ? (error as { message?: string }).message
-        : "Server error";
-
-    res.status(500).json({ message: errorMessage, error: true, success: false });
+  } catch (error: any) {
+    return res.status(500).json({
+      message: error.message || "Server error",
+      error: true,
+      success: false
+    });
   }
 };
 
@@ -58,8 +71,16 @@ export const addCategory = async (req: Request, res: Response) => {
 export const updateCategory = async (req: Request, res: Response) => {
   try {
     const userId = (req as Request & { userId?: string }).userId;
-    const { name, image} = req.body;
-    const {id} = req.params;
+    const { name, image } = req.body;
+    const { slug } = req.params;
+
+    if (!slug) {
+      return res.status(400).json({
+        message: "Slug is required",
+        error: true,
+        success: false
+      });
+    }
 
     if (!userId) {
       return res.status(401).json({
@@ -78,16 +99,33 @@ export const updateCategory = async (req: Request, res: Response) => {
       });
     }
 
-    const category = await CategoryModel.findById(id);
-    if (!category) {
+    const updateData: any = {};
+
+    if (name) {
+      const cleanName = name.trim();
+      updateData.name = cleanName;
+
+      updateData.slug = cleanName
+        .toLowerCase()
+        .replace(/ /g, "-")
+        .replace(/[^\w-]+/g, "");
+    }
+
+    if (image) updateData.image = image;
+
+    const updatedCategory = await CategoryModel.findOneAndUpdate(
+      { slug },
+      updateData,
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedCategory) {
       return res.status(404).json({
-        message: "Category not found 1",
+        message: "Category not found",
         error: true,
         success: false
       });
     }
-
-    const updatedCategory = await CategoryModel.updateOne({ _id: id }, { name, image });
 
     return res.json({
       message: "Category updated successfully",
@@ -95,13 +133,13 @@ export const updateCategory = async (req: Request, res: Response) => {
       success: true,
       error: false
     });
-  } catch (error) {
-    const errorMessage =
-      typeof error === "object" && error !== null && "message" in error
-        ? (error as { message?: string }).message
-        : "Server error";
 
-    res.status(500).json({ message: errorMessage, error: true, success: false });
+  } catch (error: any) {
+    return res.status(500).json({
+      message: error.message || "Server error",
+      error: true,
+      success: false
+    });
   }
 };
 
@@ -109,24 +147,50 @@ export const updateCategory = async (req: Request, res: Response) => {
 export const deleteCategory = async (req: Request, res: Response) => {
   try {
     const userId = (req as Request & { userId?: string }).userId;
-    const { id } = req.params;
+    const { slug } = req.params;
+
+    if (!slug) {
+      return res.status(400).json({
+        message: "Slug is required",
+        error: true,
+        success: false
+      });
+    }
 
     if (!userId) {
-      return res.status(401).json({ message: "Unauthorized", error: true, success: false });
+      return res.status(401).json({
+        message: "Unauthorized",
+        error: true,
+        success: false
+      });
     }
 
     const user = await UserModel.findById(userId);
     if (!user || user.role !== "ADMIN") {
-      return res.status(403).json({ message: "Unauthorized access", error: true, success: false });
+      return res.status(403).json({
+        message: "Unauthorized access",
+        error: true,
+        success: false
+      });
     }
 
-    const category = await CategoryModel.findById(id);
+    const category = await CategoryModel.findOne({ slug });
+
     if (!category) {
-      return res.status(404).json({ message: "Category not found", error: true, success: false });
+      return res.status(404).json({
+        message: "Category not found",
+        error: true,
+        success: false
+      });
     }
 
-    const checkSubCategory = await SubCategoryModel.find({ category: { "$in": [id] } }).countDocuments();
-    const checkProduct = await ProductModel.find({ category: { "$in": [id] } }).countDocuments();
+    const checkSubCategory = await SubCategoryModel.countDocuments({
+      category: category._id
+    });
+
+    const checkProduct = await ProductModel.countDocuments({
+      category: category._id
+    });
 
     if (checkSubCategory > 0 || checkProduct > 0) {
       return res.status(400).json({
@@ -136,35 +200,48 @@ export const deleteCategory = async (req: Request, res: Response) => {
       });
     }
 
-    await CategoryModel.deleteOne({ _id: id });
+    await CategoryModel.deleteOne({ slug });
 
     return res.json({
       message: "Category deleted successfully",
       success: true,
       error: false
     });
-  } catch (error) {
-    const errorMessage =
-      typeof error === "object" && error !== null && "message" in error
-        ? (error as { message?: string }).message
-        : "Server error";
 
-    res.status(500).json({ message: errorMessage, error: true, success: false });
+  } catch (error: any) {
+    return res.status(500).json({
+      message: error.message || "Server error",
+      error: true,
+      success: false
+    });
   }
 };
 
 // Get All Categories
 export const getCategory = async (req: Request, res: Response) => {
   try {
-    const data = await CategoryModel.find().sort({ name: 1 });
-    return res.json({ data, success: true, error: false });
+    const data = await CategoryModel.find()
+      .sort({ name: 1 })
+      .select("name image slug")
+      .lean();
+
+    return res.json({
+      data,
+      success: true,
+      error: false
+    });
+
   } catch (error) {
     const errorMessage =
       typeof error === "object" && error !== null && "message" in error
         ? (error as { message?: string }).message
         : "Server error";
 
-    res.status(500).json({ message: errorMessage, error: true, success: false });
+    res.status(500).json({
+      message: errorMessage,
+      error: true,
+      success: false
+    });
   }
 };
 
@@ -198,12 +275,26 @@ export const bulkUploadCategory = async (req: Request, res: Response) => {
       });
     }
 
-    const formattedData = categories.map((item) => ({
-      name: item.name,
-      image: item.image || undefined
-    }));
+    const formattedData = categories.map((item) => {
+      if (!item.name) {
+        throw new Error("Category name is required");
+      }
 
-    const result = await CategoryModel.insertMany(formattedData);
+      const cleanName = item.name.trim();
+
+      return {
+        name: cleanName,
+        image: item.image || undefined,
+        slug: cleanName
+          .toLowerCase()
+          .replace(/ /g, "-")
+          .replace(/[^\w-]+/g, "")
+      };
+    });
+
+    const result = await CategoryModel.insertMany(formattedData, {
+      ordered: false
+    });
 
     return res.status(201).json({
       message: "Bulk categories uploaded successfully",
@@ -212,12 +303,11 @@ export const bulkUploadCategory = async (req: Request, res: Response) => {
       error: false
     });
 
-  } catch (error) {
-    const errorMessage =
-      typeof error === "object" && error !== null && "message" in error
-        ? (error as { message?: string }).message
-        : "Server error";
-
-    res.status(500).json({ message: errorMessage, error: true, success: false });
+  } catch (error: any) {
+    return res.status(500).json({
+      message: error.message || "Bulk upload failed",
+      error: true,
+      success: false
+    });
   }
 };

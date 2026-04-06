@@ -2,16 +2,26 @@ import { Request, Response } from "express";
 import UserModel from "../models/user.model";
 import SubCategoryModel from "../models/subCategory.model";
 import mongoose from "mongoose";
+import CategoryModel from "../models/category.model";
 
 // Add SubCategory
+
 export const addSubCategory = async (req: Request, res: Response) => {
   try {
     const userId = (req as Request & { userId?: string }).userId;
     const { name, image, category } = req.body;
 
-    if (!name || !image || !category?.[0]) {
+    if (!name || !image || !category) {
       return res.status(400).json({
         message: "Enter required fields",
+        error: true,
+        success: false
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(category)) {
+      return res.status(400).json({
+        message: "Invalid category ID",
         error: true,
         success: false
       });
@@ -53,16 +63,27 @@ export const addSubCategory = async (req: Request, res: Response) => {
         ? (error as { message?: string }).message
         : "Server error";
 
-    res.status(500).json({ message: errorMessage, error: true, success: false });
+    res.status(500).json({
+      message: errorMessage,
+      error: true,
+      success: false
+    });
   }
 };
 
 // Get SubCategory
 export const getSubCategory = async (req: Request, res: Response) => {
   try {
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+
     const data = await SubCategoryModel.find()
       .sort({ createdAt: -1 })
-      .populate("category");
+      .skip(skip)
+      .limit(limit)
+      .populate("category", "name image")
+      .lean();
 
     return res.json({
       message: "Sub Category data fetched successfully",
@@ -76,34 +97,43 @@ export const getSubCategory = async (req: Request, res: Response) => {
         ? (error as { message?: string }).message
         : "Server error";
 
-    res.status(500).json({ message: errorMessage, error: true, success: false });
+    res.status(500).json({
+      message: errorMessage,
+      error: true,
+      success: false
+    });
   }
 };
 
 // Get SubCategories by Category ID
-export const getSubCategoryByCategory = async (req: Request, res: Response) => {
+export const getSubCategoryByCategorySlug = async (req: Request, res: Response) => {
   try {
-    const { categoryId } = req.body;
+    const { slug } = req.params;
 
-    if (!categoryId) {
+    if (!slug) {
       return res.status(400).json({
-        message: "Provide category id",
+        message: "Provide category slug",
         error: true,
         success: false,
       });
     }
 
-    if (!mongoose.Types.ObjectId.isValid(categoryId)) {
-      return res.status(400).json({
-        message: "Invalid category id",
+    const category = await CategoryModel.findOne({ slug });
+
+    if (!category) {
+      return res.status(404).json({
+        message: "Category not found",
         error: true,
         success: false,
       });
     }
+
 
     const subcategories = await SubCategoryModel.find({
-      category: { $in: [categoryId] },
-    });
+      category: category._id,
+    })
+      .sort({ createdAt: -1 })
+      .lean();
 
     return res.json({
       message: "Subcategories fetched successfully",
@@ -111,13 +141,18 @@ export const getSubCategoryByCategory = async (req: Request, res: Response) => {
       success: true,
       error: false,
     });
+
   } catch (error) {
     const errorMessage =
       typeof error === "object" && error !== null && "message" in error
         ? (error as { message?: string }).message
         : "Server error";
 
-    res.status(500).json({ message: errorMessage, error: true, success: false });
+    res.status(500).json({
+      message: errorMessage,
+      error: true,
+      success: false,
+    });
   }
 };
 
@@ -126,11 +161,11 @@ export const getSubCategoryByCategory = async (req: Request, res: Response) => {
 export const deleteSubCategory = async (req: Request, res: Response) => {
   try {
     const userId = (req as Request & { userId?: string }).userId;
-    const { id } = req.params;
+    const { slug } = req.params;
 
-    if (!id) {
+    if (!slug) {
       return res.status(400).json({
-        message: "Details Not Found",
+        message: "Slug is required",
         error: true,
         success: false
       });
@@ -153,7 +188,7 @@ export const deleteSubCategory = async (req: Request, res: Response) => {
       });
     }
 
-    const deleteSub = await SubCategoryModel.findByIdAndDelete(id);
+    const deleteSub = await SubCategoryModel.findOneAndDelete({ slug });
 
     if (!deleteSub) {
       return res.status(404).json({
@@ -176,7 +211,11 @@ export const deleteSubCategory = async (req: Request, res: Response) => {
         ? (error as { message?: string }).message
         : "Server error";
 
-    res.status(500).json({ message: errorMessage, error: true, success: false });
+    res.status(500).json({
+      message: errorMessage,
+      error: true,
+      success: false
+    });
   }
 };
 
@@ -184,12 +223,12 @@ export const deleteSubCategory = async (req: Request, res: Response) => {
 export const updateSubCategory = async (req: Request, res: Response) => {
   try {
     const userId = (req as Request & { userId?: string }).userId;
-    const {name, image, category } = req.body;
-    const {id} = req.params;
+    const { name, image, category } = req.body;
+    const { slug } = req.params;
 
-    if (!id) {
+    if (!slug) {
       return res.status(400).json({
-        message: "Details Not Found",
+        message: "Slug is required",
         error: true,
         success: false
       });
@@ -212,10 +251,33 @@ export const updateSubCategory = async (req: Request, res: Response) => {
       });
     }
 
-    const subCategory = await SubCategoryModel.findByIdAndUpdate(
-      id,
-      { name, image, category },
-      { new: true }
+    const updateData: any = {};
+
+    if (name) {
+      updateData.name = name.trim();
+      updateData.slug = name
+        .toLowerCase()
+        .replace(/ /g, "-")
+        .replace(/[^\w-]+/g, "");
+    }
+
+    if (image) updateData.image = image;
+
+    if (category) {
+      if (!mongoose.Types.ObjectId.isValid(category)) {
+        return res.status(400).json({
+          message: "Invalid category id",
+          error: true,
+          success: false
+        });
+      }
+      updateData.category = category;
+    }
+
+    const subCategory = await SubCategoryModel.findOneAndUpdate(
+      { slug },
+      updateData,
+      { new: true, runValidators: true }
     );
 
     if (!subCategory) {
@@ -239,10 +301,13 @@ export const updateSubCategory = async (req: Request, res: Response) => {
         ? (error as { message?: string }).message
         : "Server error";
 
-    res.status(500).json({ message: errorMessage, error: true, success: false });
+    res.status(500).json({
+      message: errorMessage,
+      error: true,
+      success: false
+    });
   }
 };
-
 
 export const bulkUploadSubCategory = async (req: Request, res: Response) => {
   try {
@@ -274,13 +339,29 @@ export const bulkUploadSubCategory = async (req: Request, res: Response) => {
       });
     }
 
-    const formattedData = subCategories.map((item) => ({
-      name: item.name,
-      image: item.image || "",
-      category: item.category || [] 
-    }));
+    const formattedData = subCategories.map((item) => {
+      if (!item.name || !item.category) {
+        throw new Error("Name and category are required");
+      }
 
-    const result = await SubCategoryModel.insertMany(formattedData);
+      if (!mongoose.Types.ObjectId.isValid(item.category)) {
+        throw new Error(`Invalid category id for ${item.name}`);
+      }
+
+      return {
+        name: item.name.trim(),
+        image: item.image || "",
+        category: item.category,
+        slug: item.name
+          .toLowerCase()
+          .replace(/ /g, "-")
+          .replace(/[^\w-]+/g, "")
+      };
+    });
+
+    const result = await SubCategoryModel.insertMany(formattedData, {
+      ordered: false
+    });
 
     return res.status(201).json({
       message: "Bulk subcategories uploaded successfully",
@@ -289,14 +370,9 @@ export const bulkUploadSubCategory = async (req: Request, res: Response) => {
       error: false
     });
 
-  } catch (error) {
-    const errorMessage =
-      typeof error === "object" && error !== null && "message" in error
-        ? (error as { message?: string }).message
-        : "Server error";
-
-    res.status(500).json({
-      message: errorMessage,
+  } catch (error: any) {
+    return res.status(500).json({
+      message: error.message || "Bulk upload failed",
       error: true,
       success: false
     });

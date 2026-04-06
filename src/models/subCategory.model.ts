@@ -9,16 +9,32 @@ const subCategorySchema = new mongoose.Schema({
         type : String,
         default : ""
     },
-    category : [
-        {
-            type : mongoose.Schema.ObjectId,
-            ref : "category"
-        }
-    ]
+    slug: {
+        type: String,
+        lowercase: true,
+        trim: true
+    },
+    category : {
+        type : mongoose.Schema.ObjectId,
+        ref : "category"
+    }
 },{
     timestamps : true
-})
+});
 
-const SubCategoryModel = mongoose.model('subCategory',subCategorySchema)
+subCategorySchema.index({ category: 1 });
+subCategorySchema.index({ slug: 1 }, { unique: true });
 
-export default SubCategoryModel
+subCategorySchema.pre("save", function (next) {
+    if (this.name) {
+        this.slug = this.name
+            .toLowerCase()
+            .replace(/ /g, "-")
+            .replace(/[^\w-]+/g, "");
+    }
+    next();
+});
+
+const SubCategoryModel = mongoose.model('subCategory', subCategorySchema);
+
+export default SubCategoryModel;
