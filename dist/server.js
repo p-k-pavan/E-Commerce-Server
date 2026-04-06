@@ -38,10 +38,7 @@ app.use((0, cors_1.default)({
 app.use((0, cookie_parser_1.default)());
 app.use(express_1.default.json());
 app.get("/", (req, res) => {
-    res.status(200).json({
-        success: true,
-        message: "API is running successfully"
-    });
+    res.send("API is running");
 });
 app.use("/api/users", user_router_1.default);
 app.use("/api/address", address_router_1.default);

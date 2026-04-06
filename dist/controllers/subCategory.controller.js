@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateSubCategory = exports.deleteSubCategory = exports.getSubCategoryByCategory = exports.getSubCategory = exports.addSubCategory = void 0;
+exports.bulkUploadSubCategory = exports.updateSubCategory = exports.deleteSubCategory = exports.getSubCategoryByCategory = exports.getSubCategory = exports.addSubCategory = void 0;
 const user_model_1 = __importDefault(require("../models/user.model"));
 const subCategory_model_1 = __importDefault(require("../models/subCategory.model"));
 const mongoose_1 = __importDefault(require("mongoose"));
@@ -221,3 +221,54 @@ const updateSubCategory = (req, res) => __awaiter(void 0, void 0, void 0, functi
     }
 });
 exports.updateSubCategory = updateSubCategory;
+const bulkUploadSubCategory = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const userId = req.userId;
+        const subCategories = req.body;
+        if (!userId) {
+            return res.status(401).json({
+                message: "Unauthorized",
+                error: true,
+                success: false
+            });
+        }
+        const user = yield user_model_1.default.findById(userId);
+        if (!user || user.role !== "ADMIN") {
+            return res.status(403).json({
+                message: "Unauthorized access",
+                error: true,
+                success: false
+            });
+        }
+        if (!Array.isArray(subCategories) || subCategories.length === 0) {
+            return res.status(400).json({
+                message: "Invalid data. Send array of subcategories",
+                error: true,
+                success: false
+            });
+        }
+        const formattedData = subCategories.map((item) => ({
+            name: item.name,
+            image: item.image || "",
+            category: item.category || []
+        }));
+        const result = yield subCategory_model_1.default.insertMany(formattedData);
+        return res.status(201).json({
+            message: "Bulk subcategories uploaded successfully",
+            data: result,
+            success: true,
+            error: false
+        });
+    }
+    catch (error) {
+        const errorMessage = typeof error === "object" && error !== null && "message" in error
+            ? error.message
+            : "Server error";
+        res.status(500).json({
+            message: errorMessage,
+            error: true,
+            success: false
+        });
+    }
+});
+exports.bulkUploadSubCategory = bulkUploadSubCategory;

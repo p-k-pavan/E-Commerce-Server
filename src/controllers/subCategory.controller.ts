@@ -242,3 +242,63 @@ export const updateSubCategory = async (req: Request, res: Response) => {
     res.status(500).json({ message: errorMessage, error: true, success: false });
   }
 };
+
+
+export const bulkUploadSubCategory = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as Request & { userId?: string }).userId;
+    const subCategories = req.body;
+
+    if (!userId) {
+      return res.status(401).json({
+        message: "Unauthorized",
+        error: true,
+        success: false
+      });
+    }
+
+    const user = await UserModel.findById(userId);
+    if (!user || user.role !== "ADMIN") {
+      return res.status(403).json({
+        message: "Unauthorized access",
+        error: true,
+        success: false
+      });
+    }
+
+    if (!Array.isArray(subCategories) || subCategories.length === 0) {
+      return res.status(400).json({
+        message: "Invalid data. Send array of subcategories",
+        error: true,
+        success: false
+      });
+    }
+
+    const formattedData = subCategories.map((item) => ({
+      name: item.name,
+      image: item.image || "",
+      category: item.category || [] 
+    }));
+
+    const result = await SubCategoryModel.insertMany(formattedData);
+
+    return res.status(201).json({
+      message: "Bulk subcategories uploaded successfully",
+      data: result,
+      success: true,
+      error: false
+    });
+
+  } catch (error) {
+    const errorMessage =
+      typeof error === "object" && error !== null && "message" in error
+        ? (error as { message?: string }).message
+        : "Server error";
+
+    res.status(500).json({
+      message: errorMessage,
+      error: true,
+      success: false
+    });
+  }
+};

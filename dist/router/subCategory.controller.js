@@ -9,6 +9,7 @@ const subCategory_controller_1 = require("../controllers/subCategory.controller"
 const router = express_1.default.Router();
 router.post("/", VerifyToken_1.default, subCategory_controller_1.addSubCategory);
 router.post("/get-subcategory-by-categoryId", subCategory_controller_1.getSubCategoryByCategory);
+router.post("/bulk-upload", VerifyToken_1.default, subCategory_controller_1.bulkUploadSubCategory);
 router.put("/:id", VerifyToken_1.default, subCategory_controller_1.updateSubCategory);
 router.delete("/:id", VerifyToken_1.default, subCategory_controller_1.deleteSubCategory);
 router.get("/", subCategory_controller_1.getSubCategory);

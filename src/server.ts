@@ -38,10 +38,7 @@ app.use(cookieParser());
 app.use(express.json());
 
 app.get("/", (req, res) => {
-    res.status(200).json({
-        success: true,
-        message: "API is running successfully"
-    });
+    res.send("API is running");
 });
 
 app.use("/api/users", userRouter);
