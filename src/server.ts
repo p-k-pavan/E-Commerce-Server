@@ -55,13 +55,13 @@ app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
 
-app.use((req, res) => {
-    if (!res.headersSent) {
-        res.status(404).json({
-            success: false,
-            message: "Route not found",
-        });
-    }
+app.use((req, res, next) => {
+    const statusCode = res.statusCode ? res.statusCode : 404;
+    const message = res.statusMessage || "Something went wrong";
+    res.status(statusCode).json({
+        success: false,
+        message: message,
+    });
+    next();
 });
-
 app.use(errorHandler);
