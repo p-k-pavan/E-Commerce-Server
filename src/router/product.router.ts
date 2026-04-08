@@ -4,6 +4,7 @@ import {
   addProduct,
   bulkUploadProduct,
   deleteProduct,
+  getHomePageData,
   getProductByCategory,
   getProductByCategoryAndSubCategory,
   getProductController,
@@ -24,6 +25,8 @@ router.put("/:slug", VerifyToken, updateProductDetails);
 router.delete("/:slug", VerifyToken, deleteProduct);
 
 router.get("/", getProductController);
+
+router.get("/home", getHomePageData);
 
 router.get("/search", searchProduct);
 

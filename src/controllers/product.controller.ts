@@ -608,3 +608,104 @@ export const bulkUploadProduct = async (req: Request, res: Response) => {
         });
     }
 };
+
+
+export const getHomePageData = async (req: Request, res: Response) => {
+  try {
+    const selectedCategories = [
+      "Fruits & Vegetables",
+      "Atta, Rice & Dal",
+      "Dairy, Bread & Eggs",
+      "Chicken, Meat & Fish",
+      "Snacks & Munchies",
+      "Cold Drinks & Juices"
+    ];
+
+    const data = await ProductModel.aggregate([
+      {
+        $match: {
+          publish: true,
+          stock: { $gt: 0 }
+        }
+      },
+
+      {
+        $lookup: {
+          from: "categories",
+          localField: "category",
+          foreignField: "_id",
+          as: "categoryData"
+        }
+      },
+
+      { $unwind: "$categoryData" },
+
+      {
+        $match: {
+          "categoryData.name": { $in: selectedCategories }
+        }
+      },
+
+      {
+        $group: {
+          _id: "$categoryData._id",
+          name: { $first: "$categoryData.name" },
+          slug: { $first: "$categoryData.slug" },
+          image: { $first: "$categoryData.image" },
+
+          products: {
+            $push: {
+              name: "$name",
+              slug: "$slug",
+              description: "$description",
+              image: "$image",
+              price: "$price",
+              discount: "$discount",
+              unit: "$unit"
+            }
+          }
+        }
+      },
+
+      {
+        $addFields: {
+          products: { $slice: ["$products", 16] }
+        }
+      },
+
+      {
+        $addFields: {
+          sortOrder: {
+            $indexOfArray: [selectedCategories, "$name"]
+          }
+        }
+      },
+
+      {
+        $sort: { sortOrder: 1 }
+      },
+
+      {
+        $project: {
+          _id: 1,
+          name: 1,
+          slug: 1,
+          image: 1,
+          products: 1
+        }
+      }
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      data
+    });
+
+  } catch (error) {
+    console.error("Home API Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch homepage data"
+    });
+  }
+};

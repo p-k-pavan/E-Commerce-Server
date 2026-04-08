@@ -105,8 +105,6 @@ const productSchema = new mongoose.Schema(
 
 productSchema.index({ name: "text", description: "text" });
 
-productSchema.index({ category: 1 });
-productSchema.index({ subCategory: 1 });
 productSchema.index({ createdAt: -1 });
 
 productSchema.pre("validate", function (next) {

@@ -130,7 +130,7 @@ const loginUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         if (!process.env.JWT_SECRET) {
             throw new Error("JWT_SECRET environment variable is not defined");
         }
-        const token = jsonwebtoken_1.default.sign({ userId: user._id }, process.env.JWT_SECRET, {
+        const token = jsonwebtoken_1.default.sign({ userId: user._id, role: user.role, name: user.name }, process.env.JWT_SECRET, {
             expiresIn: age,
         });
         res.cookie("NammaMart", token, {
