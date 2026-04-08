@@ -1,30 +1,14 @@
 import { Request, Response } from "express";
 import ProductModel from "../models/product.model";
 import UserModel from "../models/user.model";
+import CategoryModel from "../models/category.model";
 
 //add Product
 export const addProduct = async (req: Request, res: Response) => {
     try {
-        const userId = (req as Request & { userId?: string }).userId;
+        const user = req as Request & { userId?: string; role?: string; name?: string };
 
-        if (!userId) {
-            return res.status(400).json({
-                message: "Unauthorized",
-                success: false,
-                error: true
-            });
-        }
-
-        const user = await UserModel.findById(userId);
-        if (!user) {
-            return res.status(404).json({
-                message: "User details not found",
-                success: false,
-                error: true
-            });
-        }
-
-        if (user.role !== "ADMIN") {
+        if (!user.userId || user.role !== "ADMIN") {
             return res.status(403).json({
                 message: "Unauthorized access",
                 success: false,
@@ -38,33 +22,54 @@ export const addProduct = async (req: Request, res: Response) => {
             category,
             subCategory,
             unit,
-            stock,
+            stock = 0,
             price,
-            discount,
+            discount = 0,
             description,
-            more_details,
-            publish
+            more_details = {},
+            publish = true
         } = req.body;
-
 
         if (
             !name ||
-            !image?.length ||
-            !category?.length ||
-            !subCategory?.length ||
+            !Array.isArray(image) || image.length === 0 ||
+            !Array.isArray(category) || category.length === 0 ||
+            !Array.isArray(subCategory) || subCategory.length === 0 ||
             !unit ||
-            !price ||
+            price === undefined ||
             !description
         ) {
             return res.status(400).json({
-                message: "All fields are required!",
+                message: "Invalid or missing required fields",
                 success: false,
                 error: true
             });
         }
 
-        const product = new ProductModel({
+        if (price < 0 || discount < 0 || discount > 100 || stock < 0) {
+            return res.status(400).json({
+                message: "Invalid numeric values",
+                success: false,
+                error: true
+            });
+        }
+
+        let baseSlug = name
+            .toLowerCase()
+            .replace(/[^a-z0-9 ]/g, "")
+            .replace(/\s+/g, "-");
+
+        let slug = baseSlug;
+        let count = 0;
+
+        while (await ProductModel.findOne({ slug })) {
+            count++;
+            slug = `${baseSlug}-${count}`;
+        }
+
+        const product = await ProductModel.create({
             name,
+            slug,
             image,
             category,
             subCategory,
@@ -76,26 +81,27 @@ export const addProduct = async (req: Request, res: Response) => {
             more_details,
             publish,
             sellerName: user.name,
-            sellerId: user._id
+            sellerId: user.userId
         });
-
-        const saveProduct = await product.save();
 
         return res.status(201).json({
             message: "Product created successfully",
-            data: saveProduct,
-            error: false,
-            success: true
+            data: {
+                _id: product._id,
+                name: product.name,
+                slug: product.slug,
+                price: product.price,
+                image: product.image
+            },
+            success: true,
+            error: false
         });
 
     } catch (error) {
-        const errorMessage =
-            typeof error === "object" && error !== null && "message" in error
-                ? (error as { message?: string }).message
-                : "Server error";
+        console.error("Add Product Error:", error);
 
-        res.status(500).json({
-            message: errorMessage,
+        return res.status(500).json({
+            message: "Internal server error",
             success: false,
             error: true
         });
@@ -105,27 +111,11 @@ export const addProduct = async (req: Request, res: Response) => {
 // Update Product Detail
 export const updateProductDetails = async (req: Request, res: Response) => {
     try {
-        const userId = (req as Request & { userId?: string }).userId;
-        const productId = req.params.id;
+        const { slug } = req.params;
 
-        if (!userId) {
-            return res.status(400).json({
-                message: "Unauthorized",
-                success: false,
-                error: true
-            });
-        }
+        const user = req as Request & { userId?: string; role?: string };
 
-        const user = await UserModel.findById(userId);
-        if (!user) {
-            return res.status(404).json({
-                message: "User details not found",
-                success: false,
-                error: true
-            });
-        }
-
-        if (user.role !== "ADMIN") {
+        if (!user.userId || user.role !== "ADMIN") {
             return res.status(403).json({
                 message: "Unauthorized access",
                 success: false,
@@ -133,80 +123,88 @@ export const updateProductDetails = async (req: Request, res: Response) => {
             });
         }
 
-        if (!productId) {
+        if (!slug) {
             return res.status(400).json({
-                message: "Product ID is required",
+                message: "Product slug is required",
                 success: false,
                 error: true
             });
         }
 
-        const product = await ProductModel.findById(productId);
-        if (!product) {
+        const allowedFields = [
+            "name",
+            "image",
+            "category",
+            "subCategory",
+            "unit",
+            "stock",
+            "price",
+            "discount",
+            "description",
+            "more_details",
+            "publish"
+        ];
+
+        const updateData: any = {};
+
+        for (const key of allowedFields) {
+            if (key in req.body) {
+                updateData[key] = req.body[key];
+            }
+        }
+
+        if (updateData.name) {
+            updateData.slug = updateData.name
+                .toLowerCase()
+                .replace(/[^a-z0-9 ]/g, "")
+                .replace(/\s+/g, "-");
+        }
+
+        const updatedProduct = await ProductModel.findOneAndUpdate(
+            { slug },
+            { $set: updateData },
+            {
+                new: true,
+                runValidators: true
+            }
+        )
+            .select("-__v")
+            .lean();
+
+        if (!updatedProduct) {
             return res.status(404).json({
                 message: "Product not found",
                 success: false,
                 error: true
             });
         }
-
-        const updateFields = [
-            "name", "image", "category", "subCategory", "unit", "stock", "price", "discount", "description", "more_details", "publish"
-        ];
-        const productDoc: any = product;
-        updateFields.forEach(field => {
-            if (field in req.body) {
-                productDoc[field] = req.body[field];
-            }
-        });
-
-        const updatedProduct = await product.save();
 
         return res.status(200).json({
             message: "Product updated successfully",
             data: updatedProduct,
-            error: false,
-            success: true
+            success: true,
+            error: false
         });
-    } catch (error) {
-        const errorMessage =
-            typeof error === "object" && error !== null && "message" in error
-                ? (error as { message?: string }).message
-                : "Server error";
 
-        res.status(500).json({
-            message: errorMessage,
+    } catch (error) {
+        console.error("Update Product Error:", error);
+
+        return res.status(500).json({
+            message: "Internal server error",
             success: false,
             error: true
         });
     }
-}
+};
 
 //delete products
 export const deleteProduct = async (req: Request, res: Response) => {
     try {
+        const { slug } = req.params;
 
-        const userId = (req as Request & { userId?: string }).userId;
-        const productId = req.params.id;
+        const user = req as Request & { userId?: string; role?: string };
 
-        if (!userId) {
-            return res.status(400).json({
-                message: "Unauthorized",
-                success: false,
-                error: true
-            });
-        }
-
-        const user = await UserModel.findById(userId);
-        if (!user) {
-            return res.status(404).json({
-                message: "User details not found",
-                success: false,
-                error: true
-            });
-        }
-
-        if (user.role !== "ADMIN") {
+        if (!user.userId || user.role !== "ADMIN") {
             return res.status(403).json({
                 message: "Unauthorized access",
                 success: false,
@@ -214,15 +212,61 @@ export const deleteProduct = async (req: Request, res: Response) => {
             });
         }
 
-        if (!productId) {
+        if (!slug) {
             return res.status(400).json({
-                message: "Product ID is required",
+                message: "Product slug is required",
                 success: false,
                 error: true
             });
         }
 
-        const product = await ProductModel.findById(productId);
+        const deletedProduct = await ProductModel.findOneAndDelete({ slug });
+
+        if (!deletedProduct) {
+            return res.status(404).json({
+                message: "Product not found",
+                success: false,
+                error: true
+            });
+        }
+
+        return res.status(200).json({
+            message: "Product deleted successfully",
+            success: true,
+            error: false
+        });
+
+    } catch (error) {
+        console.error("Delete Product Error:", error);
+
+        return res.status(500).json({
+            message: "Internal server error",
+            success: false,
+            error: true
+        });
+    }
+};
+
+export const getProductDetails = async (req: Request, res: Response) => {
+    try {
+        const { slug } = req.params;
+
+        if (!slug) {
+            return res.status(400).json({
+                message: "Product slug is required",
+                success: false,
+                error: true
+            });
+        }
+
+        const product = await ProductModel.findOne({ slug })
+            .select("-__v") 
+            .populate({
+                path: "category subCategory",
+                select: "name slug"
+            })
+            .lean();
+
         if (!product) {
             return res.status(404).json({
                 message: "Product not found",
@@ -231,257 +275,375 @@ export const deleteProduct = async (req: Request, res: Response) => {
             });
         }
 
-        await ProductModel.findByIdAndDelete(productId)
-
-        res.status(200).json({
-            message: "Product deleted successfully",
-            success: true,
-            error: false
-        })
-
-
-    } catch (error) {
-        const errorMessage =
-            typeof error === "object" && error !== null && "message" in error
-                ? (error as { message?: string }).message
-                : "Server error";
-
-        res.status(500).json({
-            message: errorMessage,
-            success: false,
-            error: true
-        });
-    }
-}
-
-//get Product Details
-export const getProductDetails = async (req: Request, res: Response) => {
-    try {
-        const { id } = req.params;
-
-
-        if (!id) {
-            return res.status(404).json({
-                message: "Product details not found",
-                success: false,
-                error: true
-            });
-        }
-
-        const product = await ProductModel.findById(id);
-
-        if (!product) {
-            return res.status(404).json({
-                message: "Product details not found",
-                success: false,
-                error: true
-            });
-        }
-
-        res.status(200).json({
-            message: "",
+        return res.status(200).json({
+            message: "Product details",
             productData: product,
             success: true,
             error: false
-        })
+        });
 
     } catch (error) {
-        const errorMessage =
-            typeof error === "object" && error !== null && "message" in error
-                ? (error as { message?: string }).message
-                : "Server error";
+        console.error("Error in getProductDetails:", error);
 
-        res.status(500).json({
-            message: errorMessage,
+        return res.status(500).json({
+            message: "Internal server error",
             success: false,
             error: true
         });
     }
-}
+};
 
 export const searchProduct = async (req: Request, res: Response) => {
   try {
-    let { search = "", page = 1, limit = 10 } = req.body || {};
+    let { search = "", page = 1, limit = 10 } = req.query as {
+      search?: string;
+      page?: string;
+      limit?: string;
+    };
 
-    // If 'search' has value -> search by text
-    // Else -> show all products
-    const query = search.trim()
-      ? { $text: { $search: search } }
-      : {};
+    page = Number(page);
+    limit = Number(limit);
+
+    if (isNaN(page) || page <= 0) page = 1;
+    if (isNaN(limit) || limit <= 0 || limit > 50) limit = 10;
 
     const skip = (page - 1) * limit;
 
-    const [data, dataCount] = await Promise.all([
+    const hasSearch = search.trim().length > 0;
+
+    const query: any = hasSearch
+      ? { $text: { $search: search } }
+      : {};
+
+    const [data, totalCount] = await Promise.all([
       ProductModel.find(query)
-        .sort({ name: 1 })
+        .sort(hasSearch ? { score: { $meta: "textScore" } } : { createdAt: -1 })
         .skip(skip)
         .limit(limit)
-        .populate("category subCategory"),
-      ProductModel.countDocuments(query),
+        .select("name price image slug category subCategory") 
+        .populate({
+          path: "category subCategory",
+          select: "name slug"
+        })
+        .lean(), 
+
+      ProductModel.countDocuments(query)
     ]);
 
-    return res.json({
-      message: search.trim() ? "Search results" : "All products",
+    return res.status(200).json({
+      message: hasSearch ? "Search results" : "All products",
       success: true,
       error: false,
       data,
-      totalCount: dataCount,
-      totalPage: Math.ceil(dataCount / limit),
+      totalCount,
+      totalPage: Math.ceil(totalCount / limit),
       page,
-      limit,
+      limit
     });
-  } catch (error) {
-    const errorMessage =
-      typeof error === "object" && error !== null && "message" in error
-        ? (error as { message?: string }).message
-        : "Server error";
 
-    res.status(500).json({
-      message: errorMessage,
+  } catch (error) {
+    console.error("Search Error:", error);
+
+    return res.status(500).json({
+      message: "Internal server error",
       success: false,
-      error: true,
+      error: true
     });
   }
 };
 
-
-//get Product
 export const getProductController = async (req: Request, res: Response) => {
     try {
+        let { page = 1, limit = 10, search } = req.query as {
+            page?: string;
+            limit?: string;
+            search?: string;
+        };
 
-        let { page, limit, search } = req.body
+        page = Number(page);
+        limit = Number(limit);
 
-        if (!page) {
-            page = 1
+        if (isNaN(page) || page <= 0) page = 1;
+        if (isNaN(limit) || limit <= 0 || limit > 50) limit = 10;
+
+        const skip = (page - 1) * limit;
+
+        const query: any = {};
+
+        if (search) {
+            query.$text = { $search: search };
         }
-
-        if (!limit) {
-            limit = 10
-        }
-
-        const query = search ? {
-            $text: {
-                $search: search
-            }
-        } : {}
-
-        const skip = (page - 1) * limit
 
         const [data, totalCount] = await Promise.all([
-            ProductModel.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).populate('category subCategory'),
+            ProductModel.find(query)
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit)
+                .select("name price image slug category subCategory")
+                .populate({
+                    path: "category subCategory",
+                    select: "name slug" 
+                })
+                .lean(), 
+
             ProductModel.countDocuments(query)
-        ])
+        ]);
 
-        return res.json({
+        return res.status(200).json({
             message: "Product data",
-            error: false,
             success: true,
-            totalCount: totalCount,
+            error: false,
+            totalCount,
             totalNoPage: Math.ceil(totalCount / limit),
-            data: data
-        })
-    } catch (error) {
-        const errorMessage =
-            typeof error === "object" && error !== null && "message" in error
-                ? (error as { message?: string }).message
-                : "Server error";
+            page,
+            limit,
+            data
+        });
 
-        res.status(500).json({
-            message: errorMessage,
+    } catch (error) {
+        console.error("Error in getProductController:", error);
+
+        return res.status(500).json({
+            message: "Internal server error",
             success: false,
             error: true
         });
     }
-}
+};
 
 export const getProductByCategory = async (req: Request, res: Response) => {
     try {
-        const { id } = req.body
+        let { slug, page = 1, limit = 15 } = req.query;
 
-        if (!id) {
+        if (!slug) {
             return res.status(400).json({
-                message: "provide category id",
+                message: "Provide category slug",
                 error: true,
                 success: false
-            })
+            });
         }
 
-        const product = await ProductModel.find({
-            category: { $in: id }
-        }).limit(15)
+        page = Number(page);
+        limit = Number(limit);
 
-        return res.json({
-            message: "category product list",
-            data: product,
-            error: false,
-            success: true
-        })
+        if (isNaN(page) || page <= 0) page = 1;
+        if (isNaN(limit) || limit <= 0 || limit > 100) limit = 15;
+
+        const skip = (page - 1) * limit;
+
+        const category = await CategoryModel.findOne({ slug }).select("_id");
+
+        if (!category) {
+            return res.status(404).json({
+                message: "Category not found",
+                error: true,
+                success: false
+            });
+        }
+
+        const [products, total] = await Promise.all([
+            ProductModel.find({ category: category._id })
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit)
+                .select("name price images slug")
+                .lean(),
+
+            ProductModel.countDocuments({ category: category._id })
+        ]);
+
+        return res.status(200).json({
+            message: "Category product list",
+            data: products,
+            total,
+            page,
+            limit,
+            success: true,
+            error: false
+        });
+
     } catch (error) {
-        const errorMessage =
-            typeof error === "object" && error !== null && "message" in error
-                ? (error as { message?: string }).message
-                : "Server error";
+        console.error("Error:", error);
 
-        res.status(500).json({
-            message: errorMessage,
+        return res.status(500).json({
+            message: "Internal server error",
             success: false,
             error: true
-        })
+        });
     }
-}
+};
 
 export const getProductByCategoryAndSubCategory = async (req: Request, res: Response) => {
     try {
-        let { categoryId, subCategoryId, page, limit } = req.body
+        let { categorySlug, subCategorySlug, page = 1, limit = 10 } = req.body;
 
-        if (!categoryId || !subCategoryId) {
+        if (!categorySlug || !subCategorySlug) {
             return res.status(400).json({
-                message: "Provide categoryId and subCategoryId",
+                message: "Provide categorySlug and subCategorySlug",
                 error: true,
                 success: false
-            })
+            });
         }
 
-        if (!page) {
-            page = 1
-        }
+        page = Number(page);
+        limit = Number(limit);
 
-        if (!limit) {
-            limit = 10
-        }
+        if (isNaN(page) || page <= 0) page = 1;
+        if (isNaN(limit) || limit <= 0 || limit > 100) limit = 10;
+
+        const skip = (page - 1) * limit;
 
         const query = {
-            category: { $in: categoryId },
-            subCategory: { $in: subCategoryId }
-        }
+            "category.slug": categorySlug,
+            "subCategory.slug": subCategorySlug
+        };
 
-        const skip = (page - 1) * limit
+        const [data, totalCount] = await Promise.all([
+            ProductModel.find(query)
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit)
+                .lean(),
 
-        const [data, dataCount] = await Promise.all([
-            ProductModel.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit),
             ProductModel.countDocuments(query)
-        ])
+        ]);
 
-        return res.json({
+        return res.status(200).json({
             message: "Product list",
-            data: data,
-            totalCount: dataCount,
-            page: page,
-            limit: limit,
+            data,
+            totalCount,
+            page,
+            limit,
             success: true,
             error: false
-        })
+        });
 
     } catch (error) {
-        const errorMessage =
-            typeof error === "object" && error !== null && "message" in error
-                ? (error as { message?: string }).message
-                : "Server error";
+        console.error("Error in getProductByCategoryAndSubCategory:", error);
 
-        res.status(500).json({
-            message: errorMessage,
+        return res.status(500).json({
+            message: "Internal server error",
             success: false,
             error: true
-        })
+        });
     }
-}
+};
+
+export const bulkUploadProduct = async (req: Request, res: Response) => {
+    try {
+        const user = req as Request & { userId?: string; role?: string; name?: string };
+
+        if (!user.userId || user.role !== "ADMIN") {
+            return res.status(403).json({
+                message: "Unauthorized access",
+                success: false,
+                error: true
+            });
+        }
+
+        const products = req.body.products;
+
+        if (!Array.isArray(products) || products.length === 0) {
+            return res.status(400).json({
+                message: "Products array is required",
+                success: false,
+                error: true
+            });
+        }
+
+        if (products.length > 1000) {
+            return res.status(400).json({
+                message: "Max 1000 products allowed per upload",
+                success: false,
+                error: true
+            });
+        }
+
+        const preparedProducts: any[] = [];
+
+        for (const item of products) {
+            const {
+                name,
+                image,
+                category,
+                subCategory,
+                unit,
+                stock = 0,
+                price,
+                discount = 0,
+                description,
+                more_details = {},
+                publish = true
+            } = item;
+
+            if (
+                !name ||
+                !Array.isArray(image) ||
+                image.length === 0 ||
+                !Array.isArray(category) ||
+                !Array.isArray(subCategory) ||
+                !unit ||
+                price === undefined ||
+                !description
+            ) {
+                continue;
+            }
+
+            if (price < 0 || discount < 0 || discount > 100 || stock < 0) {
+                continue;
+            }
+
+            // 🔥 Generate slug
+            let baseSlug = name
+                .toLowerCase()
+                .replace(/[^a-z0-9 ]/g, "")
+                .replace(/\s+/g, "-");
+
+            let slug = baseSlug;
+            let count = 0;
+
+            while (await ProductModel.findOne({ slug })) {
+                count++;
+                slug = `${baseSlug}-${count}`;
+            }
+
+            preparedProducts.push({
+                name,
+                slug,
+                image,
+                category,
+                subCategory,
+                unit,
+                stock,
+                price,
+                discount,
+                description,
+                more_details,
+                publish,
+                sellerName: user.name,
+                sellerId: user.userId
+            });
+        }
+
+        const insertedProducts = await ProductModel.insertMany(preparedProducts, {
+            ordered: false // skip duplicates, continue
+        });
+
+        return res.status(201).json({
+            message: "Bulk upload completed",
+            success: true,
+            error: false,
+            insertedCount: insertedProducts.length,
+            skippedCount: products.length - insertedProducts.length
+        });
+
+    } catch (error) {
+        console.error("Bulk Upload Error:", error);
+
+        return res.status(500).json({
+            message: "Internal server error",
+            success: false,
+            error: true
+        });
+    }
+};
