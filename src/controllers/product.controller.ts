@@ -534,115 +534,76 @@ export const bulkUploadProduct = async (req: Request, res: Response) => {
         const user = req as Request & { userId?: string; role?: string; name?: string };
 
         if (!user.userId || user.role !== "ADMIN") {
-            return res.status(403).json({
-                message: "Unauthorized access",
-                success: false,
-                error: true
-            });
+            return res.status(403).json({ success: false, message: "Unauthorized access" });
         }
 
-        const products = req.body.products;
+        const { products } = req.body;
 
         if (!Array.isArray(products) || products.length === 0) {
-            return res.status(400).json({
-                message: "Products array is required",
-                success: false,
-                error: true
-            });
+            return res.status(400).json({ success: false, message: "Products array is required" });
         }
 
-        if (products.length > 1000) {
-            return res.status(400).json({
-                message: "Max 1000 products allowed per upload",
-                success: false,
-                error: true
-            });
-        }
+        const existingProducts = await ProductModel.find({}, { slug: 1 });
+        const slugSet = new Set(existingProducts.map(p => p.slug));
 
-        const preparedProducts: any[] = [];
-
-        for (const item of products) {
+        const preparedProducts = products.map((item) => {
             const {
-                name,
-                image,
-                category,
-                subCategory,
-                unit,
-                stock = 0,
-                price,
-                discount = 0,
-                description,
-                more_details = {},
-                publish = true
+                name, image, category, subCategory, unit,
+                stock, price, discount, description, more_details, publish
             } = item;
 
-            if (
-                !name ||
-                !Array.isArray(image) ||
-                image.length === 0 ||
-                !Array.isArray(category) ||
-                !Array.isArray(subCategory) ||
-                !unit ||
-                price === undefined ||
-                !description
-            ) {
-                continue;
-            }
+            const categoryIds = Array.isArray(category) ? category.map((c: any) => c._id || c) : [];
+            const subCategoryIds = Array.isArray(subCategory) ? subCategory.map((s: any) => s._id || s) : [];
 
-            if (price < 0 || discount < 0 || discount > 100 || stock < 0) {
-                continue;
-            }
-
-            // 🔥 Generate slug
             let baseSlug = name
                 .toLowerCase()
                 .replace(/[^a-z0-9 ]/g, "")
                 .replace(/\s+/g, "-");
-
+            
             let slug = baseSlug;
-            let count = 0;
-
-            while (await ProductModel.findOne({ slug })) {
-                count++;
+            let count = 1;
+            while (slugSet.has(slug)) {
                 slug = `${baseSlug}-${count}`;
+                count++;
             }
+            slugSet.add(slug);
 
-            preparedProducts.push({
+            return {
                 name,
                 slug,
                 image,
-                category,
-                subCategory,
+                category: categoryIds,
+                subCategory: subCategoryIds,
                 unit,
-                stock,
+                stock: stock || 0,
                 price,
-                discount,
+                discount: discount || 0,
                 description,
-                more_details,
-                publish,
+                more_details: more_details || {},
+                publish: publish !== undefined ? publish : true,
                 sellerName: user.name,
                 sellerId: user.userId
-            });
-        }
+            };
+        });
 
-        const insertedProducts = await ProductModel.insertMany(preparedProducts, {
-            ordered: false // skip duplicates, continue
+
+        const finalProducts = preparedProducts.filter(p => p.name && p.price !== undefined && p.category.length > 0);
+
+        const insertedProducts = await ProductModel.insertMany(finalProducts, {
+            ordered: false 
         });
 
         return res.status(201).json({
-            message: "Bulk upload completed",
             success: true,
-            error: false,
             insertedCount: insertedProducts.length,
             skippedCount: products.length - insertedProducts.length
         });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("Bulk Upload Error:", error);
-
         return res.status(500).json({
-            message: "Internal server error",
             success: false,
+            message: error.message || "Internal server error",
             error: true
         });
     }
