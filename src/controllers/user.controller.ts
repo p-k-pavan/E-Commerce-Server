@@ -134,7 +134,7 @@ export const loginUser = async (req: Request, res: Response) => {
         if (!process.env.JWT_SECRET) {
             throw new Error("JWT_SECRET environment variable is not defined");
         }
-        const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET as string, {
+        const token = jwt.sign({ userId: user._id, role: user.role, name: user.name }, process.env.JWT_SECRET as string, {
             expiresIn: age,
         });
         res.cookie("NammaMart", token, {
