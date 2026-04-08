@@ -42,3 +42,5 @@ const VerifyToken = (req: Request, res: Response, next: NextFunction) => {
     });
   }
 };
+
+export default VerifyToken;
