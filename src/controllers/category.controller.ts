@@ -326,6 +326,7 @@ export const getCategoryWithSubCategories = async (req: Request, res: Response) 
       {
         $project: {
           name: 1,
+          slug:1,
           subCategories: {
             name: 1,
             slug: 1,

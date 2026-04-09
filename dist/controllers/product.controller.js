@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getHomePageData = exports.bulkUploadProduct = exports.getProductByCategoryAndSubCategory = exports.getProductByCategory = exports.getProductController = exports.searchProduct = exports.getProductDetails = exports.deleteProduct = exports.updateProductDetails = exports.addProduct = void 0;
 const product_model_1 = __importDefault(require("../models/product.model"));
 const category_model_1 = __importDefault(require("../models/category.model"));
+const subCategory_model_1 = __importDefault(require("../models/subCategory.model"));
 //add Product
 const addProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -406,7 +407,7 @@ const getProductByCategory = (req, res) => __awaiter(void 0, void 0, void 0, fun
 exports.getProductByCategory = getProductByCategory;
 const getProductByCategoryAndSubCategory = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        let { categorySlug, subCategorySlug, page = 1, limit = 10 } = req.body;
+        const { categorySlug, subCategorySlug } = req.params;
         if (!categorySlug || !subCategorySlug) {
             return res.status(400).json({
                 message: "Provide categorySlug and subCategorySlug",
@@ -414,37 +415,60 @@ const getProductByCategoryAndSubCategory = (req, res) => __awaiter(void 0, void 
                 success: false
             });
         }
-        page = Number(page);
-        limit = Number(limit);
-        if (isNaN(page) || page <= 0)
-            page = 1;
-        if (isNaN(limit) || limit <= 0 || limit > 100)
-            limit = 10;
-        const skip = (page - 1) * limit;
+        const category = yield category_model_1.default.findOne({ slug: categorySlug });
+        if (!category) {
+            return res.status(404).json({
+                message: "Category not found",
+                error: true,
+                success: false
+            });
+        }
+        const subCategory = yield subCategory_model_1.default.findOne({
+            slug: subCategorySlug,
+            category: category._id
+        });
+        if (!subCategory) {
+            return res.status(404).json({
+                message: "SubCategory not found",
+                error: true,
+                success: false
+            });
+        }
         const query = {
-            "category.slug": categorySlug,
-            "subCategory.slug": subCategorySlug
+            category: category._id,
+            subCategory: subCategory._id
         };
         const [data, totalCount] = yield Promise.all([
             product_model_1.default.find(query)
+                .select("name slug price discount image stock unit description")
                 .sort({ createdAt: -1 })
-                .skip(skip)
-                .limit(limit)
                 .lean(),
             product_model_1.default.countDocuments(query)
         ]);
+        const formattedData = data.map((item) => {
+            var _a;
+            return ({
+                _id: item._id,
+                name: item.name,
+                slug: item.slug,
+                price: item.price,
+                discount: item.discount,
+                image: (_a = item.image) === null || _a === void 0 ? void 0 : _a[0],
+                stock: item.stock,
+                unit: item.unit,
+                description: item.description
+            });
+        });
         return res.status(200).json({
             message: "Product list",
-            data,
+            data: formattedData,
             totalCount,
-            page,
-            limit,
             success: true,
             error: false
         });
     }
     catch (error) {
-        console.error("Error in getProductByCategoryAndSubCategory:", error);
+        console.error("Error:", error);
         return res.status(500).json({
             message: "Internal server error",
             success: false,

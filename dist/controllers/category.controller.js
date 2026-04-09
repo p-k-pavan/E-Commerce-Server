@@ -298,7 +298,7 @@ const getCategoryWithSubCategories = (req, res) => __awaiter(void 0, void 0, voi
             {
                 $project: {
                     name: 1,
-                    slug:1,
+                    slug: 1,
                     subCategories: {
                         name: 1,
                         slug: 1,

@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import ProductModel from "../models/product.model";
 import UserModel from "../models/user.model";
 import CategoryModel from "../models/category.model";
+import SubCategoryModel from "../models/subCategory.model";
 
 //add Product
 export const addProduct = async (req: Request, res: Response) => {
@@ -260,7 +261,7 @@ export const getProductDetails = async (req: Request, res: Response) => {
         }
 
         const product = await ProductModel.findOne({ slug })
-            .select("-__v") 
+            .select("-__v")
             .populate({
                 path: "category subCategory",
                 select: "name slug"
@@ -294,62 +295,62 @@ export const getProductDetails = async (req: Request, res: Response) => {
 };
 
 export const searchProduct = async (req: Request, res: Response) => {
-  try {
-    let { search = "", page = 1, limit = 10 } = req.query as {
-      search?: string;
-      page?: string;
-      limit?: string;
-    };
+    try {
+        let { search = "", page = 1, limit = 10 } = req.query as {
+            search?: string;
+            page?: string;
+            limit?: string;
+        };
 
-    page = Number(page);
-    limit = Number(limit);
+        page = Number(page);
+        limit = Number(limit);
 
-    if (isNaN(page) || page <= 0) page = 1;
-    if (isNaN(limit) || limit <= 0 || limit > 50) limit = 10;
+        if (isNaN(page) || page <= 0) page = 1;
+        if (isNaN(limit) || limit <= 0 || limit > 50) limit = 10;
 
-    const skip = (page - 1) * limit;
+        const skip = (page - 1) * limit;
 
-    const hasSearch = search.trim().length > 0;
+        const hasSearch = search.trim().length > 0;
 
-    const query: any = hasSearch
-      ? { $text: { $search: search } }
-      : {};
+        const query: any = hasSearch
+            ? { $text: { $search: search } }
+            : {};
 
-    const [data, totalCount] = await Promise.all([
-      ProductModel.find(query)
-        .sort(hasSearch ? { score: { $meta: "textScore" } } : { createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .select("name price image slug category subCategory") 
-        .populate({
-          path: "category subCategory",
-          select: "name slug"
-        })
-        .lean(), 
+        const [data, totalCount] = await Promise.all([
+            ProductModel.find(query)
+                .sort(hasSearch ? { score: { $meta: "textScore" } } : { createdAt: -1 })
+                .skip(skip)
+                .limit(limit)
+                .select("name price image slug category subCategory")
+                .populate({
+                    path: "category subCategory",
+                    select: "name slug"
+                })
+                .lean(),
 
-      ProductModel.countDocuments(query)
-    ]);
+            ProductModel.countDocuments(query)
+        ]);
 
-    return res.status(200).json({
-      message: hasSearch ? "Search results" : "All products",
-      success: true,
-      error: false,
-      data,
-      totalCount,
-      totalPage: Math.ceil(totalCount / limit),
-      page,
-      limit
-    });
+        return res.status(200).json({
+            message: hasSearch ? "Search results" : "All products",
+            success: true,
+            error: false,
+            data,
+            totalCount,
+            totalPage: Math.ceil(totalCount / limit),
+            page,
+            limit
+        });
 
-  } catch (error) {
-    console.error("Search Error:", error);
+    } catch (error) {
+        console.error("Search Error:", error);
 
-    return res.status(500).json({
-      message: "Internal server error",
-      success: false,
-      error: true
-    });
-  }
+        return res.status(500).json({
+            message: "Internal server error",
+            success: false,
+            error: true
+        });
+    }
 };
 
 export const getProductController = async (req: Request, res: Response) => {
@@ -382,9 +383,9 @@ export const getProductController = async (req: Request, res: Response) => {
                 .select("name price image slug category subCategory")
                 .populate({
                     path: "category subCategory",
-                    select: "name slug" 
+                    select: "name slug"
                 })
-                .lean(), 
+                .lean(),
 
             ProductModel.countDocuments(query)
         ]);
@@ -475,7 +476,7 @@ export const getProductByCategory = async (req: Request, res: Response) => {
 
 export const getProductByCategoryAndSubCategory = async (req: Request, res: Response) => {
     try {
-        let { categorySlug, subCategorySlug, page = 1, limit = 10 } = req.body;
+        const { categorySlug, subCategorySlug } = req.params;
 
         if (!categorySlug || !subCategorySlug) {
             return res.status(400).json({
@@ -485,41 +486,64 @@ export const getProductByCategoryAndSubCategory = async (req: Request, res: Resp
             });
         }
 
-        page = Number(page);
-        limit = Number(limit);
+        const category = await CategoryModel.findOne({ slug: categorySlug });
+        if (!category) {
+            return res.status(404).json({
+                message: "Category not found",
+                error: true,
+                success: false
+            });
+        }
 
-        if (isNaN(page) || page <= 0) page = 1;
-        if (isNaN(limit) || limit <= 0 || limit > 100) limit = 10;
+        const subCategory = await SubCategoryModel.findOne({
+            slug: subCategorySlug,
+            category: category._id
+        });
 
-        const skip = (page - 1) * limit;
+        if (!subCategory) {
+            return res.status(404).json({
+                message: "SubCategory not found",
+                error: true,
+                success: false
+            });
+        }
 
         const query = {
-            "category.slug": categorySlug,
-            "subCategory.slug": subCategorySlug
+            category: category._id,
+            subCategory: subCategory._id
         };
 
         const [data, totalCount] = await Promise.all([
             ProductModel.find(query)
+                .select("name slug price discount image stock unit description")
                 .sort({ createdAt: -1 })
-                .skip(skip)
-                .limit(limit)
                 .lean(),
 
             ProductModel.countDocuments(query)
         ]);
 
+        const formattedData = data.map((item) => ({
+            _id: item._id,
+            name: item.name,
+            slug: item.slug,
+            price: item.price,
+            discount: item.discount,
+            image: item.image?.[0],
+            stock: item.stock,
+            unit: item.unit,
+            description: item.description
+        }));
+
         return res.status(200).json({
             message: "Product list",
-            data,
+            data: formattedData,
             totalCount,
-            page,
-            limit,
             success: true,
             error: false
         });
 
     } catch (error) {
-        console.error("Error in getProductByCategoryAndSubCategory:", error);
+        console.error("Error:", error);
 
         return res.status(500).json({
             message: "Internal server error",
@@ -559,7 +583,7 @@ export const bulkUploadProduct = async (req: Request, res: Response) => {
                 .toLowerCase()
                 .replace(/[^a-z0-9 ]/g, "")
                 .replace(/\s+/g, "-");
-            
+
             let slug = baseSlug;
             let count = 1;
             while (slugSet.has(slug)) {
@@ -590,7 +614,7 @@ export const bulkUploadProduct = async (req: Request, res: Response) => {
         const finalProducts = preparedProducts.filter(p => p.name && p.price !== undefined && p.category.length > 0);
 
         const insertedProducts = await ProductModel.insertMany(finalProducts, {
-            ordered: false 
+            ordered: false
         });
 
         return res.status(201).json({
@@ -611,101 +635,101 @@ export const bulkUploadProduct = async (req: Request, res: Response) => {
 
 
 export const getHomePageData = async (req: Request, res: Response) => {
-  try {
-    const selectedCategories = [
-      "Fruits & Vegetables",
-      "Atta, Rice & Dal",
-      "Dairy, Bread & Eggs",
-      "Chicken, Meat & Fish",
-      "Snacks & Munchies",
-      "Cold Drinks & Juices"
-    ];
+    try {
+        const selectedCategories = [
+            "Fruits & Vegetables",
+            "Atta, Rice & Dal",
+            "Dairy, Bread & Eggs",
+            "Chicken, Meat & Fish",
+            "Snacks & Munchies",
+            "Cold Drinks & Juices"
+        ];
 
-    const data = await ProductModel.aggregate([
-      {
-        $match: {
-          publish: true,
-          stock: { $gt: 0 }
-        }
-      },
+        const data = await ProductModel.aggregate([
+            {
+                $match: {
+                    publish: true,
+                    stock: { $gt: 0 }
+                }
+            },
 
-      {
-        $lookup: {
-          from: "categories",
-          localField: "category",
-          foreignField: "_id",
-          as: "categoryData"
-        }
-      },
+            {
+                $lookup: {
+                    from: "categories",
+                    localField: "category",
+                    foreignField: "_id",
+                    as: "categoryData"
+                }
+            },
 
-      { $unwind: "$categoryData" },
+            { $unwind: "$categoryData" },
 
-      {
-        $match: {
-          "categoryData.name": { $in: selectedCategories }
-        }
-      },
+            {
+                $match: {
+                    "categoryData.name": { $in: selectedCategories }
+                }
+            },
 
-      {
-        $group: {
-          _id: "$categoryData._id",
-          name: { $first: "$categoryData.name" },
-          slug: { $first: "$categoryData.slug" },
-          image: { $first: "$categoryData.image" },
+            {
+                $group: {
+                    _id: "$categoryData._id",
+                    name: { $first: "$categoryData.name" },
+                    slug: { $first: "$categoryData.slug" },
+                    image: { $first: "$categoryData.image" },
 
-          products: {
-            $push: {
-              name: "$name",
-              slug: "$slug",
-              description: "$description",
-              image: "$image",
-              price: "$price",
-              discount: "$discount",
-              unit: "$unit"
+                    products: {
+                        $push: {
+                            name: "$name",
+                            slug: "$slug",
+                            description: "$description",
+                            image: "$image",
+                            price: "$price",
+                            discount: "$discount",
+                            unit: "$unit"
+                        }
+                    }
+                }
+            },
+
+            {
+                $addFields: {
+                    products: { $slice: ["$products", 16] }
+                }
+            },
+
+            {
+                $addFields: {
+                    sortOrder: {
+                        $indexOfArray: [selectedCategories, "$name"]
+                    }
+                }
+            },
+
+            {
+                $sort: { sortOrder: 1 }
+            },
+
+            {
+                $project: {
+                    _id: 1,
+                    name: 1,
+                    slug: 1,
+                    image: 1,
+                    products: 1
+                }
             }
-          }
-        }
-      },
+        ]);
 
-      {
-        $addFields: {
-          products: { $slice: ["$products", 16] }
-        }
-      },
+        return res.status(200).json({
+            success: true,
+            data
+        });
 
-      {
-        $addFields: {
-          sortOrder: {
-            $indexOfArray: [selectedCategories, "$name"]
-          }
-        }
-      },
-
-      {
-        $sort: { sortOrder: 1 }
-      },
-
-      {
-        $project: {
-          _id: 1,
-          name: 1,
-          slug: 1,
-          image: 1,
-          products: 1
-        }
-      }
-    ]);
-
-    return res.status(200).json({
-      success: true,
-      data
-    });
-
-  } catch (error) {
-    console.error("Home API Error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Failed to fetch homepage data"
-    });
-  }
+    } catch (error) {
+        console.error("Home API Error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to fetch homepage data"
+        });
+    }
 };
