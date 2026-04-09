@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.bulkUploadCategory = exports.getCategory = exports.deleteCategory = exports.updateCategory = exports.addCategory = void 0;
+exports.getCategoryWithSubCategories = exports.bulkUploadCategory = exports.getCategory = exports.deleteCategory = exports.updateCategory = exports.addCategory = void 0;
 const category_model_1 = __importDefault(require("../models/category.model"));
 const user_model_1 = __importDefault(require("../models/user.model"));
 const product_model_1 = __importDefault(require("../models/product.model"));
@@ -284,3 +284,38 @@ const bulkUploadCategory = (req, res) => __awaiter(void 0, void 0, void 0, funct
     }
 });
 exports.bulkUploadCategory = bulkUploadCategory;
+const getCategoryWithSubCategories = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const data = yield category_model_1.default.aggregate([
+            {
+                $lookup: {
+                    from: "subcategories",
+                    localField: "_id",
+                    foreignField: "category",
+                    as: "subCategories",
+                },
+            },
+            {
+                $project: {
+                    name: 1,
+                    subCategories: {
+                        name: 1,
+                        slug: 1,
+                    },
+                },
+            },
+        ]);
+        res.status(200).json({
+            success: true,
+            data,
+        });
+    }
+    catch (error) {
+        res.status(500).json({
+            success: false,
+            error: true,
+            message: error.message,
+        });
+    }
+});
+exports.getCategoryWithSubCategories = getCategoryWithSubCategories;

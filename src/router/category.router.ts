@@ -5,7 +5,8 @@ import {
   deleteCategory,
   getCategory,
   updateCategory,
-  bulkUploadCategory
+  bulkUploadCategory,
+  getCategoryWithSubCategories
 } from "../controllers/category.controller";
 
 const router = express.Router();
@@ -15,6 +16,8 @@ router.post("/", VerifyToken, addCategory);
 router.post("/bulk", VerifyToken, bulkUploadCategory);
 
 router.get("/", getCategory);
+
+router.get("/allSubCategories", getCategoryWithSubCategories);
 
 router.put("/:slug", VerifyToken, updateCategory);
 

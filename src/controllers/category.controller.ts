@@ -311,3 +311,39 @@ export const bulkUploadCategory = async (req: Request, res: Response) => {
     });
   }
 };
+
+export const getCategoryWithSubCategories = async (req: Request, res: Response) => {
+  try {
+    const data = await CategoryModel.aggregate([
+      {
+        $lookup: {
+          from: "subcategories",
+          localField: "_id",
+          foreignField: "category",
+          as: "subCategories",
+        },
+      },
+      {
+        $project: {
+          name: 1,
+          subCategories: {
+            name: 1,
+            slug: 1,
+          },
+        },
+      },
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data,
+    });
+
+  } catch (error:any) {
+    res.status(500).json({
+      success: false,
+      error: true,
+      message: error.message,
+    });
+  }
+};
