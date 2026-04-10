@@ -47,24 +47,7 @@ export const registerUser = async (req: Request, res: Response) => {
 
         await newUser.save();
 
-        const isProduction = process.env.NODE_ENV === "production";
-        const age = 7 * 24 * 60 * 60; // 7 days in seconds
-
-        if (!process.env.JWT_SECRET) {
-            throw new Error("JWT_SECRET environment variable is not defined");
-        }
-
-        const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET as string, {
-            expiresIn: age,
-        });
-
-        res.cookie("NammaMart", token, {
-            httpOnly: true,
-            secure: isProduction,
-            sameSite: isProduction ? "none" : "lax",
-            maxAge: age * 1000,
-        })
-            .status(201)
+        res.status(201)
             .json({
                 message: "User registered successfully",
                 user: {
@@ -80,10 +63,10 @@ export const registerUser = async (req: Request, res: Response) => {
                     address_details: newUser.address_details || [],
                     orderHistory: newUser.orderHistory || [],
                     shopping_cart: newUser.shopping_cart || [],
-                    token: token,
-                    error: false,
-                    success: true
+
                 },
+                error: false,
+                success: true
             });
 
     } catch (error) {
@@ -139,8 +122,8 @@ export const loginUser = async (req: Request, res: Response) => {
         });
         res.cookie("NammaMart", token, {
             httpOnly: true,
-            secure: isProduction,
-            sameSite: isProduction ? "none" : "lax",
+            secure: true,
+            sameSite: "none",
             maxAge: age * 1000,
         })
             .status(200)
@@ -160,9 +143,9 @@ export const loginUser = async (req: Request, res: Response) => {
                     orderHistory: user.orderHistory || [],
                     shopping_cart: user.shopping_cart || [],
                     token: token,
-                    error: false,
-                    success: true
                 },
+                error: false,
+                success: true
             });
     } catch (error) {
         const errorMessage = typeof error === "object" && error !== null && "message" in error
@@ -182,8 +165,8 @@ export const logoutUser = (req: Request, res: Response) => {
 
         res.cookie("NammaMart", "", {
             httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+            secure: true,
+            sameSite: false,
             expires: new Date(0),
         }).status(200).json({
             message: "Logout successful",
