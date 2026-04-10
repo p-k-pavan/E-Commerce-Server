@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteCartItemQtyController = exports.updateCartItemQtyController = exports.getCartItemController = exports.addToCartItemController = void 0;
+exports.syncCartController = exports.deleteGuestCartController = exports.updateGuestCartQtyController = exports.getGuestCartController = exports.addToGuestCartController = exports.deleteCartItemQtyController = exports.updateCartItemQtyController = exports.getCartItemController = exports.addToCartItemController = void 0;
 const cart_model_1 = __importDefault(require("../models/cart.model"));
 const user_model_1 = __importDefault(require("../models/user.model"));
 const addToCartItemController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -179,3 +179,178 @@ const deleteCartItemQtyController = (req, res) => __awaiter(void 0, void 0, void
     }
 });
 exports.deleteCartItemQtyController = deleteCartItemQtyController;
+const addToGuestCartController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { productId, guestId } = req.body;
+        if (!productId || !guestId) {
+            return res.status(400).json({
+                message: "Provide productId and guestId",
+                error: true,
+                success: false,
+            });
+        }
+        const checkItem = yield cart_model_1.default.findOne({
+            guestId,
+            productId,
+        });
+        if (checkItem) {
+            return res.status(400).json({
+                message: "Item already in cart",
+            });
+        }
+        const cartItem = new cart_model_1.default({
+            quantity: 1,
+            guestId,
+            productId,
+        });
+        const save = yield cartItem.save();
+        return res.json({
+            data: save,
+            message: "Item added to guest cart",
+            success: true,
+            error: false,
+        });
+    }
+    catch (error) {
+        res.status(500).json({
+            message: "Server error",
+            success: false,
+            error: true,
+        });
+    }
+});
+exports.addToGuestCartController = addToGuestCartController;
+const getGuestCartController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { guestId } = req.query;
+        const cart = yield cart_model_1.default.find({
+            guestId,
+        }).populate("productId");
+        return res.json({
+            cart,
+            success: true,
+            error: false,
+        });
+    }
+    catch (error) {
+        res.status(500).json({
+            message: "Server error",
+            success: false,
+            error: true,
+        });
+    }
+});
+exports.getGuestCartController = getGuestCartController;
+const updateGuestCartQtyController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { _id, guestId, qty } = req.body;
+        if (!_id || !guestId || qty === undefined) {
+            return res.status(400).json({
+                message: "Provide _id, guestId and qty",
+                error: true,
+                success: false,
+            });
+        }
+        const cartItem = yield cart_model_1.default.findOne({
+            _id,
+            guestId,
+        });
+        if (!cartItem) {
+            return res.status(404).json({
+                message: "Cart item not found",
+                error: true,
+                success: false,
+            });
+        }
+        if (qty === 0) {
+            yield cart_model_1.default.deleteOne({ _id, guestId });
+            return res.json({
+                message: "Item removed (qty = 0)",
+                success: true,
+                error: false,
+            });
+        }
+        cartItem.quantity = qty;
+        yield cartItem.save();
+        return res.json({
+            message: "Guest cart updated",
+            success: true,
+            error: false,
+            data: cartItem,
+        });
+    }
+    catch (error) {
+        res.status(500).json({
+            message: "Server error",
+            success: false,
+            error: true,
+        });
+    }
+});
+exports.updateGuestCartQtyController = updateGuestCartQtyController;
+const deleteGuestCartController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { _id, guestId } = req.body;
+        if (!_id || !guestId) {
+            return res.status(400).json({
+                message: "Provide _id and guestId",
+                error: true,
+                success: false,
+            });
+        }
+        yield cart_model_1.default.deleteOne({ _id, guestId });
+        return res.json({
+            message: "Item removed successfully",
+            success: true,
+            error: false,
+        });
+    }
+    catch (error) {
+        res.status(500).json({
+            message: "Server error",
+            success: false,
+            error: true,
+        });
+    }
+});
+exports.deleteGuestCartController = deleteGuestCartController;
+const syncCartController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const userId = req.userId;
+        const { items } = req.body;
+        if (!items || items.length === 0) {
+            return res.json({
+                message: "No items to sync",
+                success: true,
+            });
+        }
+        for (const item of items) {
+            const existing = yield cart_model_1.default.findOne({
+                userId,
+                productId: item.productId,
+            });
+            if (existing) {
+                existing.quantity += item.quantity;
+                yield existing.save();
+            }
+            else {
+                yield cart_model_1.default.create({
+                    userId,
+                    productId: item.productId,
+                    quantity: item.quantity,
+                });
+            }
+        }
+        return res.json({
+            message: "Cart synced successfully",
+            success: true,
+        });
+    }
+    catch (error) {
+        res.status(500).json({
+            message: "Sync failed",
+            success: false,
+        });
+    }
+});
+exports.syncCartController = syncCartController;
