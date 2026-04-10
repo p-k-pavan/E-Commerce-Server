@@ -164,7 +164,7 @@ const logoutUser = (req, res) => {
         res.cookie("NammaMart", "", {
             httpOnly: true,
             secure: true,
-            sameSite: false,
+            sameSite: 'none',
             expires: new Date(0),
         }).status(200).json({
             message: "Logout successful",
