@@ -580,6 +580,7 @@ const getHomePageData = (req, res) => __awaiter(void 0, void 0, void 0, function
                     image: { $first: "$categoryData.image" },
                     products: {
                         $push: {
+                            _id: "$_id",
                             name: "$name",
                             slug: "$slug",
                             description: "$description",
