@@ -679,6 +679,7 @@ export const getHomePageData = async (req: Request, res: Response) => {
 
                     products: {
                         $push: {
+                            _id: "$_id",
                             name: "$name",
                             slug: "$slug",
                             description: "$description",
