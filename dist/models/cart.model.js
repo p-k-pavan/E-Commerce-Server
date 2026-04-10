@@ -16,7 +16,11 @@ const cartProductSchema = new mongoose_1.default.Schema({
     userId: {
         type: mongoose_1.default.Schema.ObjectId,
         ref: "User"
-    }
+    },
+    guestId: {
+        type: String,
+        default: null,
+    },
 }, {
     timestamps: true
 });
