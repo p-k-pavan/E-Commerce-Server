@@ -146,7 +146,7 @@ export const loginUser = async (req: Request, res: Response) => {
                     verify_email: user.verify_email || false,
                     last_login_date: user.last_login_date || new Date().toISOString(),
                     status: user.status || "active",
-                    address_details: user.address_details[0] || [],
+                    address: defaultAddress || null,
                     orderHistory: user.orderHistory || [],
                     shopping_cart: user.shopping_cart || [],
                     token: token,
