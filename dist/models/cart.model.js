@@ -7,22 +7,25 @@ const mongoose_1 = __importDefault(require("mongoose"));
 const cartProductSchema = new mongoose_1.default.Schema({
     productId: {
         type: mongoose_1.default.Schema.ObjectId,
-        ref: 'product'
+        ref: "product",
+        required: true,
     },
     quantity: {
         type: Number,
-        default: 1
+        default: 1,
+        min: 1,
     },
     userId: {
         type: mongoose_1.default.Schema.ObjectId,
-        ref: "User"
+        ref: "User",
+        default: null,
     },
     guestId: {
         type: String,
         default: null,
     },
 }, {
-    timestamps: true
+    timestamps: true,
 });
-const CartProductModel = mongoose_1.default.model('cartProduct', cartProductSchema);
+const CartProductModel = mongoose_1.default.model("cartProduct", cartProductSchema);
 exports.default = CartProductModel;

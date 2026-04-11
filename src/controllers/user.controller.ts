@@ -6,6 +6,7 @@ import UserModel from "../models/user.model";
 import generatedOtp from "../utils/generatedOTP";
 import sendMail from "../config/sendMail";
 import verifyEmailTemplate from "../utils/verifyEmailTemplate";
+import Address from "../models/address.model";
 
 
 // Register a new user
@@ -111,6 +112,12 @@ export const loginUser = async (req: Request, res: Response) => {
                 success: false
             });
         }
+
+         const defaultAddress = await Address.findOne({
+            userId: user._id,
+            isDefault: true
+        });
+
         const isProduction = process.env.NODE_ENV === "production";
         const age = 7 * 24 * 60 * 60;
 
@@ -139,7 +146,7 @@ export const loginUser = async (req: Request, res: Response) => {
                     verify_email: user.verify_email || false,
                     last_login_date: user.last_login_date || new Date().toISOString(),
                     status: user.status || "active",
-                    address_details: user.address_details || [],
+                    address_details: user.address_details[0] || [],
                     orderHistory: user.orderHistory || [],
                     shopping_cart: user.shopping_cart || [],
                     token: token,

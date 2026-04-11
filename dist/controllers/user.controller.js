@@ -20,6 +20,7 @@ const user_model_1 = __importDefault(require("../models/user.model"));
 const generatedOTP_1 = __importDefault(require("../utils/generatedOTP"));
 const sendMail_1 = __importDefault(require("../config/sendMail"));
 const verifyEmailTemplate_1 = __importDefault(require("../utils/verifyEmailTemplate"));
+const address_model_1 = __importDefault(require("../models/address.model"));
 // Register a new user
 const registerUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { name, email, password } = req.body;
@@ -110,6 +111,10 @@ const loginUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 success: false
             });
         }
+        const defaultAddress = yield address_model_1.default.findOne({
+            userId: user._id,
+            isDefault: true
+        });
         const isProduction = process.env.NODE_ENV === "production";
         const age = 7 * 24 * 60 * 60;
         if (!process.env.JWT_SECRET) {
@@ -137,7 +142,7 @@ const loginUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 verify_email: user.verify_email || false,
                 last_login_date: user.last_login_date || new Date().toISOString(),
                 status: user.status || "active",
-                address_details: user.address_details || [],
+                address_details: user.address_details[0] || [],
                 orderHistory: user.orderHistory || [],
                 shopping_cart: user.shopping_cart || [],
                 token: token,
