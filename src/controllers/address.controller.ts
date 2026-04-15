@@ -107,102 +107,154 @@ export const getAllAddress = async (req: Request, res: Response) => {
 
 // delete address
 export const deleteAddress = async (req: Request, res: Response) => {
-    try {
-        const userId = (req as Request & { userId?: string }).userId;
+  try {
+    const userId = (req as Request & { userId?: string }).userId;
+    const addressId = req.params.id;
 
-        const addressId = req.params.id;
-
-        if (!userId) {
-            return res.status(400).json({
-                message: "Unauthorize",
-                error: true,
-                success: false
-            });
-        }
-
-        if (!addressId) {
-            return res.status(400).json({ message: "Address id is required" });
-        }
-
-        const address = await Address.findOne({ _id: addressId, userId: userId });
-
-        if (!address) {
-            return res.status(404).json({
-                message: "Address not found",
-                error: true,
-                success: false
-            });
-        }
-
-        await Address.findByIdAndDelete(addressId);
-
-        // Remove address from user's address_details array
-        await UserModel.findByIdAndUpdate(userId, { $pull: { address_details: addressId } });
-
-        res.status(200).json({
-            message: "Address deleted successfully",
-            error: false,
-            success: true
-        });
-
-    } catch (error) {
-        res.status(500).json({
-            message: "Server error",
-            error: true,
-            success: false,
-        });
+    if (!userId) {
+      return res.status(400).json({
+        message: "Unauthorize",
+        error: true,
+        success: false,
+      });
     }
+
+    if (!addressId) {
+      return res.status(400).json({
+        message: "Address id is required",
+      });
+    }
+
+    const address = await Address.findOne({
+      _id: addressId,
+      userId,
+    });
+
+    if (!address) {
+      return res.status(404).json({
+        message: "Address not found",
+        error: true,
+        success: false,
+      });
+    }
+
+    await Address.findByIdAndDelete(addressId);
+
+    await UserModel.findByIdAndUpdate(userId, {
+      $pull: { address_details: addressId },
+    });
+
+    if (address.isDefault) {
+      const latestAddress = await Address.findOne({ userId })
+        .sort({ createdAt: -1 });
+
+      if (latestAddress) {
+        await Address.findByIdAndUpdate(latestAddress._id, {
+          isDefault: true,
+        });
+      }
+    }
+
+    return res.status(200).json({
+      message: "Address deleted successfully",
+      error: false,
+      success: true,
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      message: "Server error",
+      error: true,
+      success: false,
+    });
+  }
 };
 
 // update address
 export const updateAddress = async (req: Request, res: Response) => {
-    try {
-        const userId = (req as Request & { userId?: string }).userId;
-        const addressId = req.params.id;
-        console.log(userId);
-        console.log(addressId)
-        const { street, city, state, postalCode, country, mobile, isDefault } = req.body;
+  try {
+    const userId = (req as Request & { userId?: string }).userId;
+    const addressId = req.params.id;
 
-        if (!userId) {
-            return res.status(400).json({
-                message: "Unauthorize",
-                error: true,
-                success: false
-            });
-        }
+    const {
+      street,
+      city,
+      state,
+      postalCode,
+      country,
+      mobile,
+      isDefault,
+    } = req.body;
 
-        if (isDefault) {
-            await Address.updateMany({ userId, isDefault: true }, { $set: { isDefault: false } });
-        }
-
-        const updatedAddress = await Address.findOneAndUpdate(
-            { _id: addressId, userId },
-            { street, city, state, postalCode, country, mobile, isDefault: !isDefault },
-            { new: true }
-        );
-
-        if (!updatedAddress) {
-            return res.status(404).json({
-                message: "Address not found 1",
-                error: true,
-                success: false
-            });
-        }
-
-        res.status(200).json({
-            message: "Address updated successfully",
-            address: updateAddress,
-            error: false,
-            success: true
-        });
-
-    } catch (error) {
-        res.status(500).json({
-            message: "Server error",
-            error: true,
-            success: false,
-        });
+    if (!userId) {
+      return res.status(400).json({
+        message: "Unauthorize",
+        error: true,
+        success: false,
+      });
     }
+
+    const existingAddress = await Address.findOne({
+      _id: addressId,
+      userId,
+    });
+
+    if (!existingAddress) {
+      return res.status(404).json({
+        message: "Address not found",
+        error: true,
+        success: false,
+      });
+    }
+
+    if (isDefault === true) {
+      await Address.updateMany(
+        { userId },
+        { $set: { isDefault: false } }
+      );
+    }
+
+    const updatedAddress = await Address.findOneAndUpdate(
+      { _id: addressId, userId },
+      {
+        street,
+        city,
+        state,
+        postalCode,
+        country,
+        mobile,
+        isDefault: isDefault ?? existingAddress.isDefault,
+      },
+      { new: true }
+    );
+
+    if (existingAddress.isDefault && isDefault === false) {
+      const anotherAddress = await Address.findOne({
+        userId,
+        _id: { $ne: addressId },
+      }).sort({ createdAt: -1 });
+
+      if (anotherAddress) {
+        await Address.findByIdAndUpdate(anotherAddress._id, {
+          isDefault: true,
+        });
+      }
+    }
+
+    return res.status(200).json({
+      message: "Address updated successfully",
+      address: updatedAddress,
+      error: false,
+      success: true,
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      message: "Server error",
+      error: true,
+      success: false,
+    });
+  }
 };
 
 export const getAddressById = async (req: Request, res: Response) => {

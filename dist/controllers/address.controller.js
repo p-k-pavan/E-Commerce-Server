@@ -109,27 +109,42 @@ const deleteAddress = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             return res.status(400).json({
                 message: "Unauthorize",
                 error: true,
-                success: false
+                success: false,
             });
         }
         if (!addressId) {
-            return res.status(400).json({ message: "Address id is required" });
+            return res.status(400).json({
+                message: "Address id is required",
+            });
         }
-        const address = yield address_model_1.default.findOne({ _id: addressId, userId: userId });
+        const address = yield address_model_1.default.findOne({
+            _id: addressId,
+            userId,
+        });
         if (!address) {
             return res.status(404).json({
                 message: "Address not found",
                 error: true,
-                success: false
+                success: false,
             });
         }
         yield address_model_1.default.findByIdAndDelete(addressId);
-        // Remove address from user's address_details array
-        yield user_model_1.default.findByIdAndUpdate(userId, { $pull: { address_details: addressId } });
-        res.status(200).json({
+        yield user_model_1.default.findByIdAndUpdate(userId, {
+            $pull: { address_details: addressId },
+        });
+        if (address.isDefault) {
+            const latestAddress = yield address_model_1.default.findOne({ userId })
+                .sort({ createdAt: -1 });
+            if (latestAddress) {
+                yield address_model_1.default.findByIdAndUpdate(latestAddress._id, {
+                    isDefault: true,
+                });
+            }
+        }
+        return res.status(200).json({
             message: "Address deleted successfully",
             error: false,
-            success: true
+            success: true,
         });
     }
     catch (error) {
@@ -146,32 +161,53 @@ const updateAddress = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     try {
         const userId = req.userId;
         const addressId = req.params.id;
-        console.log(userId);
-        console.log(addressId);
-        const { street, city, state, postalCode, country, mobile, isDefault } = req.body;
+        const { street, city, state, postalCode, country, mobile, isDefault, } = req.body;
         if (!userId) {
             return res.status(400).json({
                 message: "Unauthorize",
                 error: true,
-                success: false
+                success: false,
             });
         }
-        if (isDefault) {
-            yield address_model_1.default.updateMany({ userId, isDefault: true }, { $set: { isDefault: false } });
-        }
-        const updatedAddress = yield address_model_1.default.findOneAndUpdate({ _id: addressId, userId }, { street, city, state, postalCode, country, mobile, isDefault: !isDefault }, { new: true });
-        if (!updatedAddress) {
+        const existingAddress = yield address_model_1.default.findOne({
+            _id: addressId,
+            userId,
+        });
+        if (!existingAddress) {
             return res.status(404).json({
-                message: "Address not found 1",
+                message: "Address not found",
                 error: true,
-                success: false
+                success: false,
             });
         }
-        res.status(200).json({
+        if (isDefault === true) {
+            yield address_model_1.default.updateMany({ userId }, { $set: { isDefault: false } });
+        }
+        const updatedAddress = yield address_model_1.default.findOneAndUpdate({ _id: addressId, userId }, {
+            street,
+            city,
+            state,
+            postalCode,
+            country,
+            mobile,
+            isDefault: isDefault !== null && isDefault !== void 0 ? isDefault : existingAddress.isDefault,
+        }, { new: true });
+        if (existingAddress.isDefault && isDefault === false) {
+            const anotherAddress = yield address_model_1.default.findOne({
+                userId,
+                _id: { $ne: addressId },
+            }).sort({ createdAt: -1 });
+            if (anotherAddress) {
+                yield address_model_1.default.findByIdAndUpdate(anotherAddress._id, {
+                    isDefault: true,
+                });
+            }
+        }
+        return res.status(200).json({
             message: "Address updated successfully",
-            address: exports.updateAddress,
+            address: updatedAddress,
             error: false,
-            success: true
+            success: true,
         });
     }
     catch (error) {
