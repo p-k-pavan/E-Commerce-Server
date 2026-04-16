@@ -257,13 +257,13 @@ const getProductDetails = (req, res) => __awaiter(void 0, void 0, void 0, functi
 exports.getProductDetails = getProductDetails;
 const searchProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        let { search = "", page = 1, limit = 10 } = req.query;
+        let { search = "", page = 1, limit = 50 } = req.query;
         page = Number(page);
         limit = Number(limit);
         if (isNaN(page) || page <= 0)
             page = 1;
         if (isNaN(limit) || limit <= 0 || limit > 50)
-            limit = 10;
+            limit = 50;
         const skip = (page - 1) * limit;
         const hasSearch = search.trim().length > 0;
         const query = hasSearch
@@ -271,26 +271,39 @@ const searchProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             : {};
         const [data, totalCount] = yield Promise.all([
             product_model_1.default.find(query)
-                .sort(hasSearch ? { score: { $meta: "textScore" } } : { createdAt: -1 })
+                .sort(hasSearch
+                ? { score: { $meta: "textScore" } }
+                : { createdAt: -1 })
                 .skip(skip)
                 .limit(limit)
-                .select("name price image slug category subCategory")
-                .populate({
-                path: "category subCategory",
-                select: "name slug"
-            })
+                .select("name price image slug discount stock unit description")
                 .lean(),
-            product_model_1.default.countDocuments(query)
+            product_model_1.default.countDocuments(query),
         ]);
+        const formattedData = data.map((item) => {
+            var _a;
+            return ({
+                _id: item._id,
+                name: item.name,
+                slug: item.slug,
+                price: item.price,
+                discount: item.discount,
+                finalPrice: item.price - (item.price * (item.discount || 0)) / 100,
+                image: ((_a = item.image) === null || _a === void 0 ? void 0 : _a[0]) || null,
+                stock: item.stock,
+                unit: item.unit,
+                description: item.description,
+            });
+        });
         return res.status(200).json({
             message: hasSearch ? "Search results" : "All products",
             success: true,
             error: false,
-            data,
+            data: formattedData,
             totalCount,
             totalPage: Math.ceil(totalCount / limit),
             page,
-            limit
+            limit,
         });
     }
     catch (error) {
@@ -298,7 +311,7 @@ const searchProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         return res.status(500).json({
             message: "Internal server error",
             success: false,
-            error: true
+            error: true,
         });
     }
 });

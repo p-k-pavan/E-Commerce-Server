@@ -295,62 +295,78 @@ export const getProductDetails = async (req: Request, res: Response) => {
 };
 
 export const searchProduct = async (req: Request, res: Response) => {
-    try {
-        let { search = "", page = 1, limit = 10 } = req.query as {
-            search?: string;
-            page?: string;
-            limit?: string;
-        };
+  try {
+    let { search = "", page = 1, limit = 50 } = req.query as {
+      search?: string;
+      page?: string;
+      limit?: string;
+    };
 
-        page = Number(page);
-        limit = Number(limit);
+    page = Number(page);
+    limit = Number(limit);
 
-        if (isNaN(page) || page <= 0) page = 1;
-        if (isNaN(limit) || limit <= 0 || limit > 50) limit = 10;
+    if (isNaN(page) || page <= 0) page = 1;
+    if (isNaN(limit) || limit <= 0 || limit > 50) limit = 50;
 
-        const skip = (page - 1) * limit;
+    const skip = (page - 1) * limit;
 
-        const hasSearch = search.trim().length > 0;
+    const hasSearch = search.trim().length > 0;
 
-        const query: any = hasSearch
-            ? { $text: { $search: search } }
-            : {};
+    const query: any = hasSearch
+      ? { $text: { $search: search } }
+      : {};
 
-        const [data, totalCount] = await Promise.all([
-            ProductModel.find(query)
-                .sort(hasSearch ? { score: { $meta: "textScore" } } : { createdAt: -1 })
-                .skip(skip)
-                .limit(limit)
-                .select("name price image slug category subCategory")
-                .populate({
-                    path: "category subCategory",
-                    select: "name slug"
-                })
-                .lean(),
+    const [data, totalCount] = await Promise.all([
+      ProductModel.find(query)
+        .sort(
+          hasSearch
+            ? { score: { $meta: "textScore" } }
+            : { createdAt: -1 }
+        )
+        .skip(skip)
+        .limit(limit)
+        .select(
+          "name price image slug discount stock unit description"
+        )
+        .lean(),
 
-            ProductModel.countDocuments(query)
-        ]);
+      ProductModel.countDocuments(query),
+    ]);
 
-        return res.status(200).json({
-            message: hasSearch ? "Search results" : "All products",
-            success: true,
-            error: false,
-            data,
-            totalCount,
-            totalPage: Math.ceil(totalCount / limit),
-            page,
-            limit
-        });
+    const formattedData = data.map((item) => ({
+      _id: item._id,
+      name: item.name,
+      slug: item.slug,
+      price: item.price,
+      discount: item.discount,
+      finalPrice:
+        item.price - (item.price * (item.discount || 0)) / 100,
+      image: item.image?.[0] || null,
+      stock: item.stock,
+      unit: item.unit,
+      description: item.description,
+    }));
 
-    } catch (error) {
-        console.error("Search Error:", error);
+    return res.status(200).json({
+      message: hasSearch ? "Search results" : "All products",
+      success: true,
+      error: false,
+      data: formattedData,
+      totalCount,
+      totalPage: Math.ceil(totalCount / limit),
+      page,
+      limit,
+    });
 
-        return res.status(500).json({
-            message: "Internal server error",
-            success: false,
-            error: true
-        });
-    }
+  } catch (error) {
+    console.error("Search Error:", error);
+
+    return res.status(500).json({
+      message: "Internal server error",
+      success: false,
+      error: true,
+    });
+  }
 };
 
 export const getProductController = async (req: Request, res: Response) => {
