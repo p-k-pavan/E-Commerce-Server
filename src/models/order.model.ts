@@ -17,7 +17,8 @@ const orderSchema = new mongoose.Schema({
     },
     product_details : {
         name : String,
-        image : Array,
+        image : String,
+        slug: String
     },
     paymentId : {
         type : String,
@@ -44,6 +45,19 @@ const orderSchema = new mongoose.Schema({
         default : 0
     },
     invoice_receipt : {
+        type : String,
+        default : ""
+    },
+    delivery_date : {
+        type : Date,
+        default : null
+    },
+    delivery_status : {
+        type : String,
+        default : "PENDING",
+        enum : ["PENDING", "SHIPPED", "DELIVERED", "CANCELLED"]
+    },
+    reson_for_cancellation : {
         type : String,
         default : ""
     }

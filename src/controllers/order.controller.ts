@@ -7,83 +7,84 @@ import Razorpay from "razorpay";
 import crypto from "crypto";
 
 export const cashonDelivery = async (req: Request, res: Response) => {
-    try {
-        const userId = (req as Request & { userId?: string }).userId;
+  try {
+    const userId = (req as Request & { userId?: string }).userId;
 
-        if (!userId) {
-            return res.status(401).json({ message: "Unauthorized", error: true, success: false });
-        }
-
-        const user = await UserModel.findById(userId);
-        if (!user) {
-            return res.status(403).json({ message: "Unauthorized access", error: true, success: false });
-        }
-
-        const { list_items, totalAmt, addressId, subTotalAmt } = req.body;
-
-        if (!list_items || !totalAmt || !addressId || !subTotalAmt) {
-            return res.status(400).json({
-                message: "Something went wrong! Missing required fields.",
-                error: true,
-                success: false
-            });
-        }
-
-        const payload = list_items.map((el: any) => {
-            const product = el.productId;
-            const price = product.price;
-            const discount = product.discount || 0;
-            const qty = el.quantity;
-
-            const discountedPrice = price - (price * discount) / 100;
-            const itemTotal = discountedPrice * qty;
-
-            return {
-                userId,
-                orderId: `ORD-${new mongoose.Types.ObjectId()}`,
-                productId: product._id,
-                product_details: {
-                    name: product.name,
-                    image: product.image
-                },
-                quantity: qty,
-                payment_status: "CASH ON DELIVERY",
-                delivery_address: addressId,
-                subTotalAmt: price * qty,
-                totalAmt: itemTotal,
-            };
-        });
-
-
-        const generatedOrders = await OrderModel.insertMany(payload);
-
-        const orderIds = generatedOrders.map((order) => order._id);
-
-
-        await UserModel.updateOne(
-            { _id: userId },
-            { $push: { orderHistory: { $each: orderIds } } }
-        );
-
-        await CartProductModel.deleteMany({ userId });
-        await UserModel.updateOne({ _id: userId }, { shopping_cart: [] });
-
-
-        return res.status(201).json({
-            message: "Order placed successfully",
-            data: generatedOrders,
-            success: true,
-            error: false
-        });
-
-    } catch (error) {
-        const errorMessage =
-            typeof error === "object" && error !== null && "message" in error
-                ? (error as { message?: string }).message
-                : "Server error";
-
-        res.status(500).json({ message: errorMessage, error: true, success: false });
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized", error: true, success: false });
     }
+
+    const user = await UserModel.findById(userId);
+    if (!user) {
+      return res.status(403).json({ message: "Unauthorized access", error: true, success: false });
+    }
+
+    const { list_items, totalAmt, addressId, subTotalAmt } = req.body;
+
+    if (!list_items || !totalAmt || !addressId || !subTotalAmt) {
+      return res.status(400).json({
+        message: "Something went wrong! Missing required fields.",
+        error: true,
+        success: false
+      });
+    }
+
+    const payload = list_items.map((el: any) => {
+      const product = el.productId;
+      const price = product.price;
+      const discount = product.discount || 0;
+      const qty = el.quantity;
+
+      const discountedPrice = price - (price * discount) / 100;
+      const itemTotal = discountedPrice * qty;
+
+      return {
+        userId,
+        orderId: `ORD-${new mongoose.Types.ObjectId()}`,
+        productId: product._id,
+        product_details: {
+          name: product.name,
+          image: product.image[0],
+          slug: product.slug
+        },
+        quantity: qty,
+        payment_status: "CASH ON DELIVERY",
+        delivery_address: addressId,
+        subTotalAmt: price * qty,
+        totalAmt: itemTotal,
+      };
+    });
+
+
+    const generatedOrders = await OrderModel.insertMany(payload);
+
+    const orderIds = generatedOrders.map((order) => order._id);
+
+
+    await UserModel.updateOne(
+      { _id: userId },
+      { $push: { orderHistory: { $each: orderIds } } }
+    );
+
+    await CartProductModel.deleteMany({ userId });
+    await UserModel.updateOne({ _id: userId }, { shopping_cart: [] });
+
+
+    return res.status(201).json({
+      message: "Order placed successfully",
+      data: generatedOrders,
+      success: true,
+      error: false
+    });
+
+  } catch (error) {
+    const errorMessage =
+      typeof error === "object" && error !== null && "message" in error
+        ? (error as { message?: string }).message
+        : "Server error";
+
+    res.status(500).json({ message: errorMessage, error: true, success: false });
+  }
 };
 
 const razorpayInstance = new Razorpay({
@@ -116,7 +117,7 @@ export const onlinePayment = async (req: Request, res: Response) => {
     }
 
     const options = {
-      amount: Math.round(totalAmt * 100), 
+      amount: Math.round(totalAmt * 100),
       currency: "INR",
       receipt: crypto.randomBytes(10).toString("hex"),
     };
@@ -133,7 +134,7 @@ export const onlinePayment = async (req: Request, res: Response) => {
       orderData: {
         list_items,
         totalAmt,
-        addressId, 
+        addressId,
         subTotalAmt
       },
       success: true,
@@ -183,11 +184,12 @@ export const verifyPayment = async (req: Request, res: Response) => {
       return {
         userId,
         orderId: `ORD-${new mongoose.Types.ObjectId()}`,
-        paymentId:razorpay_order_id,
+        paymentId: razorpay_order_id,
         productId: product._id,
         product_details: {
           name: product.name,
-          image: product.image,
+          image: product.image[0],
+          slug: product.slug
         },
         quantity: qty,
         payment_status: "PAID",
@@ -229,27 +231,60 @@ export const verifyPayment = async (req: Request, res: Response) => {
 
 
 export const getOrderDetails = async (req: Request, res: Response) => {
-    try {
-        const userId = (req as Request & { userId?: string }).userId;
+  try {
+    const userId = (req as Request & { userId?: string }).userId;
 
-        if (!userId) {
-            return res.status(401).json({ message: "Unauthorized", error: true, success: false });
-        }
-
-        const user = await UserModel.findById(userId);
-        if (!user) {
-            return res.status(403).json({ message: "Unauthorized access", error: true, success: false });
-        }
-
-        const data = await OrderModel.find({ userId }).sort({ createdAt: -1 });
-        return res.json({ data, success: true, error: false });
-
-    } catch (error) {
-        const errorMessage =
-            typeof error === "object" && error !== null && "message" in error
-                ? (error as { message?: string }).message
-                : "Server error";
-
-        res.status(500).json({ message: errorMessage, error: true, success: false });
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized", error: true, success: false });
     }
+
+    const user = await UserModel.findById(userId);
+    if (!user) {
+      return res.status(403).json({ message: "Unauthorized access", error: true, success: false });
+    }
+
+    const orders = await OrderModel.find({ userId })
+      .sort({ createdAt: -1 })
+      .populate("delivery_address")
+
+    const data = orders.map(order => ({
+      _id: order._id,
+      orderId: order.orderId,
+
+      product: {
+        name: order.product_details?.name,
+        slug: order.product_details?.slug,
+        image: order.product_details?.image
+      },
+
+      payment: {
+        status: order.payment_status,
+        paymentId: order.paymentId,
+      },
+
+      status: order.delivery_status,
+
+      delivery_date: order.delivery_date,
+
+      delivery: {
+        address: order.delivery_address,
+      },
+
+      quantity: order.quantity,
+      subTotal: order.subTotalAmt,
+      total: order.totalAmt,
+
+      createdAt: order.createdAt,
+    }));
+
+    return res.json({ data, success: true, error: false });
+
+  } catch (error) {
+    const errorMessage =
+      typeof error === "object" && error !== null && "message" in error
+        ? (error as { message?: string }).message
+        : "Server error";
+
+    res.status(500).json({ message: errorMessage, error: true, success: false });
+  }
 };

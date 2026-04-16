@@ -50,7 +50,8 @@ const cashonDelivery = (req, res) => __awaiter(void 0, void 0, void 0, function*
                 productId: product._id,
                 product_details: {
                     name: product.name,
-                    image: product.image
+                    image: product.image[0],
+                    slug: product.slug
                 },
                 quantity: qty,
                 payment_status: "CASH ON DELIVERY",
@@ -162,7 +163,8 @@ const verifyPayment = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                 productId: product._id,
                 product_details: {
                     name: product.name,
-                    image: product.image,
+                    image: product.image[0],
+                    slug: product.slug
                 },
                 quantity: qty,
                 payment_status: "PAID",
@@ -202,7 +204,34 @@ const getOrderDetails = (req, res) => __awaiter(void 0, void 0, void 0, function
         if (!user) {
             return res.status(403).json({ message: "Unauthorized access", error: true, success: false });
         }
-        const data = yield order_model_1.default.find({ userId }).sort({ createdAt: -1 });
+        const orders = yield order_model_1.default.find({ userId })
+            .sort({ createdAt: -1 })
+            .populate("delivery_address");
+        const data = orders.map(order => {
+            var _a, _b, _c;
+            return ({
+                _id: order._id,
+                orderId: order.orderId,
+                product: {
+                    name: (_a = order.product_details) === null || _a === void 0 ? void 0 : _a.name,
+                    slug: (_b = order.product_details) === null || _b === void 0 ? void 0 : _b.slug,
+                    image: (_c = order.product_details) === null || _c === void 0 ? void 0 : _c.image
+                },
+                payment: {
+                    status: order.payment_status,
+                    paymentId: order.paymentId,
+                },
+                status: order.delivery_status,
+                delivery_date: order.delivery_date,
+                delivery: {
+                    address: order.delivery_address,
+                },
+                quantity: order.quantity,
+                subTotal: order.subTotalAmt,
+                total: order.totalAmt,
+                createdAt: order.createdAt,
+            });
+        });
         return res.json({ data, success: true, error: false });
     }
     catch (error) {
