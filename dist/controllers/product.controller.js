@@ -266,14 +266,18 @@ const searchProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             limit = 50;
         const skip = (page - 1) * limit;
         const hasSearch = search.trim().length > 0;
-        const query = hasSearch
-            ? { $text: { $search: search } }
-            : {};
+        let query = {};
+        if (hasSearch) {
+            query = {
+                $or: [
+                    { name: { $regex: search, $options: "i" } },
+                    { description: { $regex: search, $options: "i" } },
+                ],
+            };
+        }
         const [data, totalCount] = yield Promise.all([
             product_model_1.default.find(query)
-                .sort(hasSearch
-                ? { score: { $meta: "textScore" } }
-                : { createdAt: -1 })
+                .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(limit)
                 .select("name price image slug discount stock unit description")

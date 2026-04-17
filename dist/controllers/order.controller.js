@@ -54,7 +54,9 @@ const cashonDelivery = (req, res) => __awaiter(void 0, void 0, void 0, function*
                         slug: product.slug,
                     },
                     quantity: qty,
-                    price: discountedPrice,
+                    price: product.price,
+                    discount: product.discount || 0,
+                    total: discountedPrice * qty,
                 };
             }),
             payment_status: "CASH ON DELIVERY",
@@ -166,7 +168,8 @@ const verifyPayment = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                         slug: product.slug,
                     },
                     quantity: qty,
-                    price: discountedPrice,
+                    price: product.price,
+                    discount: product.discount || 0,
                     total: discountedPrice * qty,
                 };
             }),
@@ -222,6 +225,7 @@ const getOrderDetails = (req, res) => __awaiter(void 0, void 0, void 0, function
                         image: (_c = item.product_details) === null || _c === void 0 ? void 0 : _c.image,
                         quantity: item.quantity,
                         price: item.price,
+                        discount: item.discount,
                         total: item.total,
                     });
                 }),
@@ -279,6 +283,7 @@ const getOrderById = (req, res) => __awaiter(void 0, void 0, void 0, function* (
                     slug: (_b = item.product_details) === null || _b === void 0 ? void 0 : _b.slug,
                     image: (_c = item.product_details) === null || _c === void 0 ? void 0 : _c.image,
                     quantity: item.quantity,
+                    discount: item.discount,
                     price: item.price,
                     total: item.total,
                 });

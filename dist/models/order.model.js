@@ -26,7 +26,9 @@ const orderSchema = new mongoose_1.default.Schema({
                 slug: String,
             },
             quantity: Number,
+            discount: Number,
             price: Number,
+            total: Number,
         },
     ],
     paymentId: {

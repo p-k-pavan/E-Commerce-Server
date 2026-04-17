@@ -24,7 +24,9 @@ const orderSchema = new mongoose.Schema({
         slug: String,
       },
       quantity: Number,
+      discount: Number,
       price: Number,
+      total: Number,
     },
   ],
 

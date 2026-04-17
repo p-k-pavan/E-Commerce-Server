@@ -49,7 +49,9 @@ export const cashonDelivery = async (req: Request, res: Response) => {
             slug: product.slug,
           },
           quantity: qty,
-          price: discountedPrice,
+          price: product.price,
+          discount: product.discount || 0,
+          total: discountedPrice * qty,
         };
       }),
 
@@ -193,7 +195,8 @@ export const verifyPayment = async (req: Request, res: Response) => {
             slug: product.slug,
           },
           quantity: qty,
-          price: discountedPrice,
+          price: product.price,
+          discount: product.discount || 0,
           total: discountedPrice * qty,
         };
       }),
@@ -258,6 +261,7 @@ export const getOrderDetails = async (req: Request, res: Response) => {
         image: item.product_details?.image,
         quantity: item.quantity,
         price: item.price,
+        discount: item.discount,
         total: item.total,
       })),
 
@@ -324,6 +328,7 @@ export const getOrderById = async (req: Request, res: Response) => {
         slug: item.product_details?.slug,
         image: item.product_details?.image,
         quantity: item.quantity,
+        discount: item.discount,
         price: item.price,
         total: item.total,
       })),

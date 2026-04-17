@@ -8,6 +8,6 @@ router.post("/",VerifyToken,cashonDelivery);
 router.post("/online-payment",VerifyToken,onlinePayment);
 router.post("/verify-payment", VerifyToken, verifyPayment);
 router.get("/",VerifyToken,getOrderDetails);
-router.get("/:orderId",VerifyToken,getOrderById);
+router.get("/:id",VerifyToken,getOrderById);
 
 export default router;
