@@ -7,65 +7,67 @@ const mongoose_1 = __importDefault(require("mongoose"));
 const orderSchema = new mongoose_1.default.Schema({
     userId: {
         type: mongoose_1.default.Schema.ObjectId,
-        ref: 'User'
+        ref: "User",
     },
     orderId: {
         type: String,
         required: [true, "Provide orderId"],
-        unique: true
+        unique: true,
     },
-    productId: {
-        type: mongoose_1.default.Schema.ObjectId,
-        ref: "product"
-    },
-    product_details: {
-        name: String,
-        image: String,
-        slug: String
-    },
+    list_items: [
+        {
+            productId: {
+                type: mongoose_1.default.Schema.ObjectId,
+                ref: "product",
+            },
+            product_details: {
+                name: String,
+                image: String,
+                slug: String,
+            },
+            quantity: Number,
+            price: Number,
+        },
+    ],
     paymentId: {
         type: String,
-        default: "NA"
+        default: "NA",
     },
     payment_status: {
         type: String,
-        default: ""
+        default: "",
     },
     delivery_address: {
         type: mongoose_1.default.Schema.ObjectId,
-        ref: 'address'
-    },
-    quantity: {
-        type: Number,
-        required: true
+        ref: "address",
     },
     subTotalAmt: {
         type: Number,
-        default: 0
+        default: 0,
     },
     totalAmt: {
         type: Number,
-        default: 0
+        default: 0,
     },
     invoice_receipt: {
         type: String,
-        default: ""
+        default: "",
     },
     delivery_date: {
         type: Date,
-        default: null
+        default: null,
     },
     delivery_status: {
         type: String,
         default: "PENDING",
-        enum: ["PENDING", "SHIPPED", "DELIVERED", "CANCELLED"]
+        enum: ["PENDING", "SHIPPED", "DELIVERED", "CANCELLED"],
     },
     reson_for_cancellation: {
         type: String,
-        default: ""
-    }
+        default: "",
+    },
 }, {
-    timestamps: true
+    timestamps: true,
 });
 const OrderModel = mongoose_1.default.model('order', orderSchema);
 exports.default = OrderModel;

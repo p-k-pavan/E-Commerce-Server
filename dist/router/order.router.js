@@ -11,4 +11,5 @@ router.post("/", VerifyToken_1.default, order_controller_1.cashonDelivery);
 router.post("/online-payment", VerifyToken_1.default, order_controller_1.onlinePayment);
 router.post("/verify-payment", VerifyToken_1.default, order_controller_1.verifyPayment);
 router.get("/", VerifyToken_1.default, order_controller_1.getOrderDetails);
+router.get("/:orderId", VerifyToken_1.default, order_controller_1.getOrderById);
 exports.default = router;
