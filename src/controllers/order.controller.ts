@@ -256,6 +256,7 @@ export const getOrderDetails = async (req: Request, res: Response) => {
       orderId: order.orderId,
 
       items: order.list_items?.map((item: any) => ({
+        productId: item.productId,
         name: item.product_details?.name,
         slug: item.product_details?.slug,
         image: item.product_details?.image,

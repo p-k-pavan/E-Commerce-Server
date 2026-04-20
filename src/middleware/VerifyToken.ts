@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from "jsonwebtoken";
 
-// Define JWT payload interface
 interface JwtPayload {
   userId: string;
   role: string;
@@ -10,7 +9,6 @@ interface JwtPayload {
   exp?: number;
 }
 
-// Extend Express Request to include userId
 declare global {
   namespace Express {
     interface Request {
@@ -21,7 +19,6 @@ declare global {
   }
 }
 
-// Correct middleware function
 const VerifyToken = (req: Request, res: Response, next: NextFunction) => {
   const token = req.cookies?.NammaMart;
 
