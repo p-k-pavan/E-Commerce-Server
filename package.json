@@ -43,6 +43,7 @@
     "razorpay": "^2.9.6",
     "razorpay-typescript": "^1.0.12",
     "resend": "^6.1.2",
-    "sharp": "^0.34.4"
+    "sharp": "^0.34.4",
+    "uuid": "^14.0.0"
   }
 }

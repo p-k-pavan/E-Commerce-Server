@@ -15,8 +15,9 @@ const category_router_1 = __importDefault(require("./router/category.router"));
 const subCategory_controller_1 = __importDefault(require("./router/subCategory.controller"));
 const product_router_1 = __importDefault(require("./router/product.router"));
 const cart_route_1 = __importDefault(require("./router/cart.route"));
-const upload_route_1 = __importDefault(require("./router/upload.route"));
 const order_router_1 = __importDefault(require("./router/order.router"));
+const dashboard_router_1 = __importDefault(require("./router/dashboard.router"));
+const admin_router_1 = __importDefault(require("./router/admin.router"));
 const app = (0, express_1.default)();
 dotenv_1.default.config();
 mongoose_1.default.connect(process.env.MONGODB_URL || "")
@@ -47,8 +48,9 @@ app.use("/api/category", category_router_1.default);
 app.use("/api/subCategory", subCategory_controller_1.default);
 app.use("/api/product", product_router_1.default);
 app.use("/api/cart", cart_route_1.default);
-app.use("/api/upload", upload_route_1.default);
 app.use("/api/order", order_router_1.default);
+app.use("/api/dashboard", dashboard_router_1.default);
+app.use("/api/admin", admin_router_1.default);
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);

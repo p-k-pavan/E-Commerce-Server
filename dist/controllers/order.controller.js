@@ -220,6 +220,7 @@ const getOrderDetails = (req, res) => __awaiter(void 0, void 0, void 0, function
                 items: (_a = order.list_items) === null || _a === void 0 ? void 0 : _a.map((item) => {
                     var _a, _b, _c;
                     return ({
+                        productId: item.productId,
                         name: (_a = item.product_details) === null || _a === void 0 ? void 0 : _a.name,
                         slug: (_b = item.product_details) === null || _b === void 0 ? void 0 : _b.slug,
                         image: (_c = item.product_details) === null || _c === void 0 ? void 0 : _c.image,

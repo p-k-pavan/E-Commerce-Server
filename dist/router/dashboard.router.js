@@ -4,8 +4,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
-const subCategory_controller_1 = require("../controllers/subCategory.controller");
 const router = express_1.default.Router();
-router.get("/", subCategory_controller_1.getSubCategory);
-router.get("/category/:slug", subCategory_controller_1.getSubCategoryByCategorySlug);
+const VerifyToken_1 = __importDefault(require("../middleware/VerifyToken"));
+const dashboard_controller_1 = require("../controllers/dashboard.controller");
+router.get("/stats", VerifyToken_1.default, dashboard_controller_1.getDashboardStats);
 exports.default = router;

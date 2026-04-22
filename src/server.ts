@@ -10,9 +10,9 @@ import CategoryRoute from "./router/category.router";
 import SubCategoryRoute from "./router/subCategory.controller";
 import ProductRoute from "./router/product.router";
 import CartRoute from "./router/cart.route"
-import UplodRoute from "./router/upload.route"
 import OrderRoute from "./router/order.router"
 import dashboardRoute from "./router/dashboard.router"
+import adminRoute from "./router/admin.router"
 
 const app = express();
 dotenv.config();
@@ -49,9 +49,9 @@ app.use("/api/category", CategoryRoute);
 app.use("/api/subCategory", SubCategoryRoute);
 app.use("/api/product", ProductRoute);
 app.use("/api/cart", CartRoute);
-app.use("/api/upload",UplodRoute);
 app.use("/api/order",OrderRoute);
 app.use("/api/dashboard",dashboardRoute)
+app.use("/api/admin",adminRoute);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

@@ -4,13 +4,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
-const VerifyToken_1 = __importDefault(require("../middleware/VerifyToken"));
 const product_controller_1 = require("../controllers/product.controller");
 const router = express_1.default.Router();
-router.post("/", VerifyToken_1.default, product_controller_1.addProduct);
-router.post("/bulk", VerifyToken_1.default, product_controller_1.bulkUploadProduct);
-router.put("/:slug", VerifyToken_1.default, product_controller_1.updateProductDetails);
-router.delete("/:slug", VerifyToken_1.default, product_controller_1.deleteProduct);
 router.get("/", product_controller_1.getProductController);
 router.get("/home", product_controller_1.getHomePageData);
 router.get("/search", product_controller_1.searchProduct);
